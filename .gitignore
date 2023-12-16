@@ -2,6 +2,7 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=cmake,visualstudio,visualstudiocode,vim
 
 build
+compile_commands.json
 
 ### CMake ###
 CMakeLists.txt.user
