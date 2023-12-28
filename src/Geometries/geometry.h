@@ -7,7 +7,7 @@
 
 namespace Geometry {
 
-using scalar_t = f32;
+using scalar_t = f64;
 
 struct Mesh {
     usize nof_vertices{};
@@ -22,11 +22,10 @@ struct Mesh {
     // dimension: nof_triangles * 3
     std::vector<std::vector<u64>> triangles;
     
-    // Vector containing the vertices wich are on the outer boundry
-    std::vector<std::vector<u64>> outer_boundry;
-
-    // Vector containing the vertices wich are on the  inner boundry
-    std::vector<std::vector<u64>> inner_boundry;
+    // Vector containing the vertices which are part of the different boundries
+    // boundries.at(0) contains the verticies of all boundries
+    // dimension: (nof_different_boundries + 1) * nof_specific boundries * 2
+    std::vector<std::vector<std::vector<u64>>> boundries;
 
     // parses a .msh file into a Mesh object and returns it
     static Mesh parse_mesh(std::string file_name) {
@@ -67,18 +66,21 @@ struct Mesh {
         }
 
         // read in the boundries
+        mesh.boundries.push_back( {} );
         for(int i = 0; i < mesh.nof_boundry_edges; ++i) {
+
             u64 m, n;
             u64 boundry_label;
             input >> m;
             input >> n;
             input >> boundry_label;
-            if(boundry_label == 1) {
-                mesh.outer_boundry.push_back({m - 1,n - 1});
+
+            mesh.boundries.at(0).push_back( {m - 1, n - 1} );
+            while( boundry_label >= mesh.boundries.size() ) {
+                mesh.boundries.push_back( {} );
             }
-            else if(boundry_label == 2) {
-                mesh.inner_boundry.push_back({m - 1,n - 1});
-            }
+            mesh.boundries.at(boundry_label).push_back( {m - 1, n - 1} );
+            
         }
 
         // Print message
