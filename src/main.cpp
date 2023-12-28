@@ -17,21 +17,19 @@ void print_mat(std::vector<std::vector<T>> mat) {
 
 int main() {
 
+    //std::string file_name = "first_mesh_n15";
+    std::string file_name = "first_mesh_n50";
+    //std::string file_name = "first_mesh_no_hole";
 
-    defer(print(0));
-    defer(print(1));
-    defer(print(2));
-    defer(print(3));
+    auto mesh = Geometry::Mesh::parse_mesh("../meshes/" + file_name + ".msh");
 
-    std::string file_name = "first_mesh_n15.msh";
-    auto geo = Geometry::Mesh::parse_mesh("../meshes/" + file_name);
-
-    for (int i = 0; i < 5; ++i) {
-        print_mat(geo.get_tria_coords(0));
-        std::cout << "\n";
+    // temporary solution_vector
+    std::vector<f32> z;
+    for (int i = 0; i < mesh.nof_vertices; ++i) {
+        z.push_back(std::abs(mesh.vertices.at(i).at(0) * mesh.vertices.at(i).at(1)));
     }
-    
-    assert(1 == 2, "this is false");
 
+    mesh.save_mesh_3D(file_name + ".vtk", z);
+    
     return 0;
 }

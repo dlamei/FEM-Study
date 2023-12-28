@@ -7,7 +7,7 @@
 
 namespace Geometry {
 
-using scalar_t = f64;
+using scalar_t = f32;
 
 struct Mesh {
     usize nof_vertices{};
@@ -63,7 +63,7 @@ struct Mesh {
             input >> m;
             input >> n;
             input >> boundry_label;
-            mesh.triangles.push_back({l, m, n});
+            mesh.triangles.push_back({l - 1, m - 1, n - 1});
         }
 
         // read in the boundries
@@ -74,12 +74,18 @@ struct Mesh {
             input >> n;
             input >> boundry_label;
             if(boundry_label == 1) {
-                mesh.outer_boundry.push_back({m,n});
+                mesh.outer_boundry.push_back({m - 1,n - 1});
             }
             else if(boundry_label == 2) {
-                mesh.inner_boundry.push_back({m,n});
+                mesh.inner_boundry.push_back({m - 1,n - 1});
             }
         }
+
+        // Print message
+        std::cout << "Finished parsing Mesh from " + file_name + "\n";
+        std::cout << "Vertices: " << mesh.nof_vertices << "   ";
+        std::cout << "Triangles: " << mesh.nof_triangles << "   ";
+        std::cout << "Boundry: " << mesh.nof_boundry_edges << '\n';
 
         return mesh;
     }
@@ -87,10 +93,53 @@ struct Mesh {
     // returns a 2*3 matrix that contains the coordinates of the vertices of the triangele with index i
     std::vector<std::vector<scalar_t>> get_tria_coords(int i) {
         std::vector<std::vector<scalar_t>> tria_coords;
-        tria_coords.push_back(vertices.at(triangles.at(i).at(0) - 1));
-        tria_coords.push_back(vertices.at(triangles.at(i).at(1) - 1));
-        tria_coords.push_back(vertices.at(triangles.at(i).at(2) - 1));
+        tria_coords.push_back(vertices.at(triangles.at(i).at(0)));
+        tria_coords.push_back(vertices.at(triangles.at(i).at(1)));
+        tria_coords.push_back(vertices.at(triangles.at(i).at(2)));
         return tria_coords;
+    }
+
+    void save_mesh_3D(std::string filename, const std::vector<scalar_t> &z) const {
+        std::ofstream output(filename);
+        assert(output.is_open(),
+                "Failed to open the mesh file");
+
+        output << "# vtk DataFile Version 3.0\n";
+        output << "2D PDE Solution on Triangulated Mesh\n";
+        output << "ASCII\n";
+        output << "DATASET UNSTRUCTURED_GRID\n";
+        output << "POINTS " << nof_vertices << " float\n";
+                
+        for (int i = 0; i < nof_vertices; ++i) {
+            output << vertices.at(i).at(0) << ' ' << vertices.at(i).at(1) << ' ' << "0" << '\n';
+        }
+
+        output << '\n';
+        output << "CELLS " << nof_triangles << " " << nof_triangles * 4 << "\n";
+        for (int i = 0; i < nof_triangles; ++i) {
+            output << "3 " << triangles.at(i).at(0) << " " << triangles.at(i).at(1) << " " << triangles.at(i).at(2) << '\n'; 
+        }
+
+        output << '\n';
+        output << "CELL_TYPES " << nof_triangles << '\n';
+        for (int i = 0; i < nof_triangles; ++i) {
+            output << "5\n";
+        }
+
+        output << '\n';
+        output << "POINT_DATA " << nof_vertices << '\n';
+        output << "SCALARS solution_field float 1\n";
+        output << "LOOKUP_TABLE default\n";
+
+        for (int i = 0; i < nof_vertices; ++i) {
+            output << z.at(i) << '\n';
+        }
+
+        // Print message
+        std::cout << "Finished saving Solution to " + filename << '\n';
+        std::cout << "Vertices: " << nof_vertices << "   ";
+        std::cout << "Triangles: " << nof_triangles << "   ";
+        std::cout << "Boundry: " << nof_boundry_edges << '\n';
     }
 
 };
