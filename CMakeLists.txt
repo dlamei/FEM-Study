@@ -5,7 +5,8 @@ project(FEM-Study)
 
 set(SOURCES
     src/utils.h
-    src/Geometries/geometry.h
+    src/Geometries/geometry.h 
+    src/Geometries/geometry.cpp
     )
 
 add_executable(FEM ${SOURCES} src/main.cpp)

@@ -18,6 +18,10 @@ typedef ptrdiff_t isize;
 typedef float     f32;
 typedef double    f64;
 
+typedef f32 scalar;
+//TO-DO define what matrix type we use globaly
+//typedef eingen::matrix matrix
+
 static_assert(sizeof(u8) == sizeof(i8));
 static_assert(sizeof(u16) == sizeof(i16));
 static_assert(sizeof(u32) == sizeof(i32));

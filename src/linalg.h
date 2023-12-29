@@ -2,9 +2,6 @@
 
 #include "utils.h"
 
-// TODO: define in utils.h
-typedef f32 scalar;
-
 /*
  * f32 column major matrix
  * 
