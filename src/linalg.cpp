@@ -76,7 +76,7 @@ Matrix Matrix::add(const Matrix &a, const Matrix &b) {
 	return sum;
 }
 
-void Matrix::mul(const Matrix &a, const Matrix &b) {
+Matrix Matrix::mul(const Matrix &a, const Matrix &b) {
 	assert(a.width == b.height);
 	auto res = uninit_matrix(b.width, a.height);
 

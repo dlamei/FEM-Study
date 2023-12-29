@@ -37,7 +37,7 @@ struct Matrix {
 	// add and return result
 	Matrix add(const Matrix &a, const Matrix &b);
 	// matrix multiplication
-	void mul(const Matrix &a, const Matrix &b);
+	Matrix mul(const Matrix &a, const Matrix &b);
 
 	/* constructors / destructors */
 
