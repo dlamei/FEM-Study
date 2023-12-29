@@ -26,14 +26,8 @@ Matrix uninit_matrix(usize w, usize h) {
 
 // allocate + initialize to zero
 Matrix init_mat(usize w, usize h) {
-	Matrix mat{};
-
-	usize size = w * h * sizeof(scalar);
-	void *data = malloc(size);
-	assert(data != NULL);
-	std::memset(data, 0, size);
-
-	mat.data = (scalar *)data;
+	Matrix mat = uninit_matrix(w, h);
+	std::memset(mat.data, 0, w * h);
 	return mat;
 }
 
@@ -91,6 +85,7 @@ Matrix Matrix::mul(const Matrix &a, const Matrix &b) {
 			res.set(sum, i, j);
 		}
 	}
+	return res;
 }
 
 inline Matrix Matrix::zero(usize w, usize h) {

@@ -18,8 +18,6 @@ typedef ptrdiff_t isize;
 typedef float     f32;
 typedef double    f64;
 
-
-
 static_assert(sizeof(u8) == sizeof(i8));
 static_assert(sizeof(u16) == sizeof(i16));
 static_assert(sizeof(u32) == sizeof(i32));
@@ -32,6 +30,9 @@ static_assert(sizeof(u32) == 4);
 static_assert(sizeof(f32) == 4);
 static_assert(sizeof(u64) == 8);
 static_assert(sizeof(f64) == 8);
+
+
+/* defer for c++ ( from [https://github.com/gingerBill/gb] )*/
 
 template <typename T> struct gbRemoveReference       { typedef T Type; };
 template <typename T> struct gbRemoveReference<T &>  { typedef T Type; };
@@ -53,8 +54,6 @@ template <typename F> gbprivDefer<F> gb__defer_func(F &&f) { return gbprivDefer<
 #define GB_DEFER_3(x)    GB_DEFER_2(x, __COUNTER__)
 #define defer(code)      auto GB_DEFER_3(_defer_) = gb__defer_func([&]()->void{code;})
 
-#include <iostream>
-
 #ifdef NDEBUG
 #define assert(...)
 #else
@@ -63,7 +62,7 @@ template <typename F> gbprivDefer<F> gb__defer_func(F &&f) { return gbprivDefer<
 #define GET_GB_ASSERT(_1, _2, NAME, ...) NAME
 #define assert(...) GET_GB_ASSERT(__VA_ARGS__, GB_ASSERT_2, GB_ASSERT_1) (__VA_ARGS__)
 
-void gb__assert(const char* expr_str, bool expr, const char* file, int line, const char* msg = nullptr)
+inline void gb__assert(const char* expr_str, bool expr, const char* file, int line, const char* msg = nullptr)
 {
     if (!expr)
     {
