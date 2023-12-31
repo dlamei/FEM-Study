@@ -1,6 +1,7 @@
 # Created by https://www.toptal.com/developers/gitignore/api/cmake,visualstudio,visualstudiocode,vim
 # Edit at https://www.toptal.com/developers/gitignore?templates=cmake,visualstudio,visualstudiocode,vim
 
+.idea
 build
 compile_commands.json
 
