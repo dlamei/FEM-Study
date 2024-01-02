@@ -160,6 +160,10 @@ namespace matrix {
 		return Matrix::ident(w, h);
 	}
 
+	void set(Matrix *m, usize x, usize y, scalar val) {
+		m->set(x, y, val);
+	}
+
 	Matrix add(const Matrix &m1, const Matrix &m2) {
 		return Matrix::add(m1, m2);
 	}

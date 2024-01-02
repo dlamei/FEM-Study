@@ -3,21 +3,25 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 project(FEM-Study)
 
+add_subdirectory(libs/eigen)
 
 set(SOURCES
-    src/utils.h
-    src/Geometries/geometry.h 
-    src/Geometries/geometry.cpp
-		src/matrix.cpp src/matrix.h
-    )
+	src/utils.h
+	src/Geometries/geometry.h 
+	src/Geometries/geometry.cpp
+	src/matrix.cpp src/matrix.h
+    src/FEM.h src/FEM.cpp
+	)
+
 
 add_executable(FEM ${SOURCES} src/main.cpp)
+target_link_libraries(FEM eigen)
 
 # testing
 add_executable(FEM_TEST EXCLUDE_FROM_ALL ${SOURCES} src/test.cpp)
 target_compile_definitions(FEM_TEST PRIVATE COMPILE_TESTS)
 find_package(Threads)
-target_link_libraries(FEM_TEST ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(FEM_TEST ${CMAKE_THREAD_LIBS_INIT} eigen)
 
 
 

@@ -9,14 +9,14 @@ Mesh Mesh::parse_mesh(std::string file_name) {
     input.open(file_name);
     assert(input.is_open(), 
             "Failed to open the mesh file");
-    
+
     // read in number of vertices, triangeles and edge vertices
     input >> mesh.nof_vertices;
     input >> mesh.nof_triangles;
     input >> mesh.nof_boundry_edges;
     assert((mesh.nof_vertices >= 0 && mesh.nof_triangles >= 0 && mesh.nof_boundry_edges >= 0), 
             "Error nof_vertices, nof_triangles or nof_boundry_edges is an invalid input");
-    
+
     // read in vertice coordinates
     for(int i = 0; i < mesh.nof_vertices; ++i) {
         scalar x, y;
@@ -49,7 +49,7 @@ Mesh Mesh::parse_mesh(std::string file_name) {
             mesh.boundries.push_back( {} );
         }
         mesh.boundries.at(boundry_label).push_back( {m - 1, n - 1} );
-        
+
     }
 
     // Print message
@@ -77,7 +77,7 @@ void Mesh::save_mesh_3D(std::string filename, const std::vector<scalar> &z) cons
     output << "ASCII\n";
     output << "DATASET UNSTRUCTURED_GRID\n";
     output << "POINTS " << nof_vertices << " float\n";
-            
+
     for (int i = 0; i < nof_vertices; ++i) {
         output << vertices.at(i).at(0) << ' ' << vertices.at(i).at(1) << ' ' << "0" << '\n';
     }
