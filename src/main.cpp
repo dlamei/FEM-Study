@@ -1,10 +1,12 @@
 #include "FEM.h"
 
 
+#define PI 3.14159
+
 scalar source_fn(const Vector<2> &x) {
-    return (8.0 * M_PI * M_PI + 1) 
-        * std::cos(2 * M_PI * x(0)) 
-        * std::cos(2 * M_PI * x(1));
+    return (8.0 * PI * PI + 1) 
+        * std::cos(2 * PI * x(0)) 
+        * std::cos(2 * PI * x(1));
 }
 
 

@@ -1,7 +1,7 @@
 #pragma  once
 
-#include <eigen3/Eigen/Eigen>
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Eigen>
+#include <Eigen/Dense>
 #include "utils.h"
 
 namespace Dim {

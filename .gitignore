@@ -4,6 +4,7 @@
 .idea
 build
 compile_commands.json
+cmake-build-*
 
 ### CMake ###
 CMakeLists.txt.user
