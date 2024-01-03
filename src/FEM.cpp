@@ -205,9 +205,9 @@ Mesh Mesh::load(const std::string &file_name) {
         input >> m;
         input >> n;
         input >> boundry_label;
-        tris(i, 0) = l;
-        tris(i, 1) = m;
-        tris(i, 2) = n;
+        tris(i, 0) = l - 1;
+        tris(i, 1) = m - 1;
+        tris(i, 2) = n - 1;
     }
 
 
