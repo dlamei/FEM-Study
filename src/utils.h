@@ -117,13 +117,17 @@ inline void gb__assert(const char* expr_str, bool expr, const char* file, const 
 
 #endif
 
+// because macros are too hard for microsoft
+// https://developercommunity.visualstudio.com/t/-va-args-does-not-work-with-multiple-macros/167330k
+#define EXPAND_VA_ARGS( x ) x
+
 #define GB_ASSERT_1(x) gb__assert(#x, x, __FILE__, BOOST_CURRENT_FUNCTION, __LINE__, nullptr)
 #define GB_ASSERT_2(x, msg) gb__assert(#x, x, __FILE__, BOOST_CURRENT_FUNCTION, __LINE__, msg)
 #define GET_GB_ASSERT(_1, _2, NAME, ...) NAME
 #ifdef assert
 #undef assert
 #endif
-#define assert(...) GET_GB_ASSERT(__VA_ARGS__, GB_ASSERT_2, GB_ASSERT_1) (__VA_ARGS__)
+#define assert(...) EXPAND_VA_ARGS( GET_GB_ASSERT(__VA_ARGS__, GB_ASSERT_2, GB_ASSERT_1) (__VA_ARGS__) )
 
 #ifdef NDEBUG
 #define db_assert(...)
