@@ -1,23 +1,38 @@
+#pragma  once
+
 #include <eigen3/Eigen/Eigen>
 #include <eigen3/Eigen/Dense>
 #include "utils.h"
 
-typedef Eigen::Matrix<scalar, Eigen::Dynamic, Eigen::Dynamic> Matrix;
+namespace Dim {
+    const int Dynamic = Eigen::Dynamic;
+}
+
+template <const int rows, const int cols>
+using Matrix = Eigen::Matrix<scalar, rows, cols>;
+
+template <const int rows>
+using Vector = Eigen::Matrix<scalar, rows, 1>;
+
+typedef Matrix<2, 3> Triangle;
+typedef Eigen::SparseMatrix<scalar> SparseMatrix;
+
+typedef scalar (*source_fn_ptr)(const Vector<2> &);
+
 
 struct Mesh {
 
-    typedef Eigen::Matrix<scalar, 2, 3> TriGeo;
+    usize n_nodes { 0 };
+    usize n_triangles { 0 };
 
-    usize nof_vertices { 0 };
-    usize nof_triangles { 0 };
-    usize nof_boundary_edges { 0 };
+    // 2 scalar per node
+    Matrix<Dim::Dynamic, 2> nodes{};
 
-    Eigen::Matrix<scalar, Eigen::Dynamic, 2> nodes{};
+    // 3 vert_indx's per triangle
     Eigen::Matrix<int, Eigen::Dynamic, 3> triangles{};
-
-    // get coords of verts of triangle i
-    TriGeo get_tria_coords(usize i);
 
     static Mesh load(const std::string &file_name);
 };
 
+
+Vector<Dim::Dynamic> solve_fem(const Mesh &mesh, source_fn_ptr source_fn);
