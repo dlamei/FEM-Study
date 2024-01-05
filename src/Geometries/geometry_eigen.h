@@ -36,7 +36,7 @@ struct Mesh {
     // Vector containing the nodes which are part of the different boundries
     // boundries.at(0) contains the verticies of all boundries
     // dimension: (nof_different_boundries + 1) * nof_specific boundries * 2
-    std::vector<std::vector<std::vector<u64>>> boundries;
+    std::vector<std::vector<u64>> boundries;
 
     // parses a .msh file into a Mesh object and returns it
     static Mesh parse_mesh(std::string file_name);

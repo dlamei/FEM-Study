@@ -16,7 +16,7 @@ scalar source_fn(const Vector<2> &x) {
 
 int main() {
     
-    std::string file_name = "first_mesh_n5";
+    std::string file_name = "4_holes_mesh";
     auto mesh = Geometry::Mesh::parse_mesh("../meshes/" + file_name + ".msh");
     auto res = solve_fem(mesh, &source_fn);
     

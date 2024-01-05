@@ -106,6 +106,16 @@ SparseMatrix assemble_gelerkin_mat(const Geometry::Mesh &mesh) {
         triplets.push_back({ indx_2, indx_2, elem_mat(2, 2) });
     }
 
+    // Boundry conditions
+    for(auto row : mesh.boundries.at(0)) {
+        // Remove boundry elements
+        triplets.erase(std::remove_if(triplets.begin(), triplets.end(), [row](Eigen::Triplet<scalar> &t)
+        { return t.row() == row; }), triplets.end());
+        // Set diagonals to 1.0
+        triplets.push_back(Eigen::Triplet<scalar>(row, row, 1.0));
+    }
+    
+
     SparseMatrix galerkin(n_verts, n_verts);
     galerkin.setFromTriplets(triplets.begin(), triplets.end());
 
@@ -129,6 +139,25 @@ Vector<Dim::Dynamic> assemble_load_vec(const Geometry::Mesh &mesh, source_fn_ptr
         phi(tri_indices(0)) += local_phi(0);
         phi(tri_indices(1)) += local_phi(1);
         phi(tri_indices(1)) += local_phi(2);
+    }
+    // Boundry Conditions
+    for(auto outer_boundry_node : mesh.boundries.at(0)) {
+        phi(outer_boundry_node) = 1.0   ;
+    }
+    for(auto inner_boundry_node : mesh.boundries.at(1)) {
+        phi(inner_boundry_node) = 0.0;
+    }
+    for(auto outer_boundry_node : mesh.boundries.at(2)) {
+        phi(outer_boundry_node) = 1.0;
+    }
+    for(auto inner_boundry_node : mesh.boundries.at(3)) {
+        phi(inner_boundry_node) = 1.0;
+    }
+    for(auto inner_boundry_node : mesh.boundries.at(4)) {
+        phi(inner_boundry_node) = 1.0;
+    }
+    for(auto inner_boundry_node : mesh.boundries.at(5)) {
+        phi(inner_boundry_node) = 1.0;
     }
 
     return phi;

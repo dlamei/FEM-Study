@@ -53,11 +53,11 @@ Mesh Mesh::parse_mesh(std::string file_name) {
         input >> m;
         input >> n;
         input >> boundry_label;
-        mesh.boundries.at(0).push_back( {m - 1, n - 1} );
+        mesh.boundries.at(0).push_back( m - 1 );
         while( boundry_label >= mesh.boundries.size() ) {
             mesh.boundries.push_back( {} );
         }
-        mesh.boundries.at(boundry_label).push_back( {m - 1, n - 1} );
+        mesh.boundries.at(boundry_label).push_back( m - 1 );
     }
 
     // Print message
