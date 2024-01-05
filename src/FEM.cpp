@@ -147,18 +147,12 @@ Vector<Dim::Dynamic> assemble_load_vec(const Geometry::Mesh &mesh, source_fn_ptr
     for(auto inner_boundry_node : mesh.boundries.at(1)) {
         phi(inner_boundry_node) = 0.0;
     }
-    for(auto outer_boundry_node : mesh.boundries.at(2)) {
-        phi(outer_boundry_node) = 1.0;
+    for(int i = 2; i < mesh.boundries.size(); ++i) {
+        for(auto outer_boundry_node : mesh.boundries.at(i)) {
+            phi(outer_boundry_node) = 1.0;
+        }
     }
-    for(auto inner_boundry_node : mesh.boundries.at(3)) {
-        phi(inner_boundry_node) = 1.0;
-    }
-    for(auto inner_boundry_node : mesh.boundries.at(4)) {
-        phi(inner_boundry_node) = 1.0;
-    }
-    for(auto inner_boundry_node : mesh.boundries.at(5)) {
-        phi(inner_boundry_node) = 1.0;
-    }
+    
 
     return phi;
 }
