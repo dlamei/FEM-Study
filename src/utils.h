@@ -5,6 +5,7 @@
 #include <cmath>
 #include <math.h>
 #include <string>
+#include <sstream>
 #include <optional>
 
 #include <cstddef>
@@ -42,6 +43,12 @@ typedef f32 scalar;
 inline bool cmp_scalar(scalar a, scalar b, scalar eps = SCALAR_EPS) {
 	return std::fabs(a - b) <= eps;
 }
+
+template<typename T, typename = void>
+constexpr bool is_defined = false;
+
+template<typename T>
+constexpr bool is_defined<T, decltype(typeid(T), void())> = true;
 
 
 /* defer for c++ ( from [https://github.com/gingerBill/gb] )*/

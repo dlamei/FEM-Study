@@ -70,7 +70,7 @@ inline Vector<3> local_load_vec(const Triangle &tri, source_fn_ptr source_fn) {
  *
  */
 
-SparseMatrix assemble_gelerkin_mat(const Mesh &mesh) {
+SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
 
     usize n_verts = mesh.n_nodes;
     usize n_cells = mesh.n_triangles;
@@ -138,7 +138,7 @@ Vector<Dim::Dynamic> assemble_load_vec(const Mesh &mesh, source_fn_ptr source_fn
 //* SOLVING *//
 
 Vector<Dim::Dynamic> solve_fem(const Mesh &mesh, source_fn_ptr source_fn) {
-    SparseMatrix a = assemble_gelerkin_mat(mesh);
+    SparseMatrix a = assemble_galerkin_mat(mesh);
     Vector<Dim::Dynamic> phi = assemble_load_vec(mesh, source_fn);
 
     Eigen::SparseLU<SparseMatrix, Eigen::COLAMDOrdering<int>> solver;

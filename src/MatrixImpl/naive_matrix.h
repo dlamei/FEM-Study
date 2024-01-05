@@ -2,9 +2,6 @@
 
 #include "../utils.h"
 
-/* if this implementation is chosen this will be the matrix type */
-typedef struct NaiveMatrix Matrix;
-
 /*
  * f32 column major matrix
  * 

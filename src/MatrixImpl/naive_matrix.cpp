@@ -1,9 +1,7 @@
 #include "naive_matrix.h"
-#include "../matrix.h"
 #include "../utils.h"
 
 #include <cstring>
-#include <iomanip>
 
 /* macros because then the assert also prints out the function name */
 
@@ -16,8 +14,8 @@
 #define CHECK_INDX_BOUND(indx) db_assert(indx < this->width * this->height);
 
 // DISCLAIMER: only allocates memory for a matrix
-Matrix uninit_matrix(usize w, usize h) {
-	Matrix mat{};
+NaiveMatrix uninit_matrix(usize w, usize h) {
+	NaiveMatrix mat{};
 
 	usize size = w * h * sizeof(scalar);
 	void *data = malloc(size);
@@ -30,37 +28,37 @@ Matrix uninit_matrix(usize w, usize h) {
 }
 
 // allocate + initialize to zero
-Matrix init_mat(usize w, usize h) {
-	Matrix mat = uninit_matrix(w, h);
+NaiveMatrix init_mat(usize w, usize h) {
+	NaiveMatrix mat = uninit_matrix(w, h);
 	std::memset(mat.data, 0, w * h * sizeof(scalar));
 	return mat;
 }
 
-inline usize Matrix::count() const {
+inline usize NaiveMatrix::count() const {
 	return this->width * this->height; 
 }
 
-inline scalar Matrix::get(usize indx) const {
+inline scalar NaiveMatrix::get(usize indx) const {
 	CHECK_INDX_BOUND(indx);
 	return this->data[indx];
 }
 
-inline scalar Matrix::get(usize x, usize y) const {
+inline scalar NaiveMatrix::get(usize x, usize y) const {
 	TO_INDEX(indx, x, y);
 	return this->get(indx);
 }
 
-inline void Matrix::set(usize indx, scalar val) {
+inline void NaiveMatrix::set(usize indx, scalar val) {
 	CHECK_INDX_BOUND(indx);
 	this->data[indx] = val;
 }
 
-inline void Matrix::set(usize x, usize y, scalar val) {
+inline void NaiveMatrix::set(usize x, usize y, scalar val) {
 	TO_INDEX(indx, x, y);
 	this->data[indx] = val;
 }
 
-void Matrix::add_assign(Matrix *a, const Matrix &b) {
+void NaiveMatrix::add_assign(NaiveMatrix *a, const NaiveMatrix &b) {
 	db_assert(a->width == b.width);
 	db_assert(a->height == b.height);
 	for (usize indx = 0; indx < a->count(); indx++) {
@@ -69,13 +67,13 @@ void Matrix::add_assign(Matrix *a, const Matrix &b) {
 	}
 }
 
-Matrix Matrix::add(const Matrix &a, const Matrix &b) {
-	auto sum = Matrix::clone(a);
-	Matrix::add_assign(&sum, b);
+NaiveMatrix NaiveMatrix::add(const NaiveMatrix &a, const NaiveMatrix &b) {
+	auto sum = NaiveMatrix::clone(a);
+	NaiveMatrix::add_assign(&sum, b);
 	return sum;
 }
 
-Matrix Matrix::mul(const Matrix &a, const Matrix &b) {
+NaiveMatrix NaiveMatrix::mul(const NaiveMatrix &a, const NaiveMatrix &b) {
 	db_assert(a.width == b.height);
 	auto res = uninit_matrix(b.width, a.height);
 
@@ -92,7 +90,7 @@ Matrix Matrix::mul(const Matrix &a, const Matrix &b) {
 	return res;
 }
 
-bool Matrix::eq(const Matrix &a, const Matrix &b, float eps) {
+bool NaiveMatrix::eq(const NaiveMatrix &a, const NaiveMatrix &b, float eps) {
 	if (a.width != b.width || a.height != b.height) return false;
 
 	for (usize i = 0; i < a.count(); i++) {
@@ -102,13 +100,13 @@ bool Matrix::eq(const Matrix &a, const Matrix &b, float eps) {
 	return true;
 }
 
-inline Matrix Matrix::zero(usize w, usize h) {
+inline NaiveMatrix NaiveMatrix::zero(usize w, usize h) {
 	auto mat = init_mat(w, h);
 	return mat;
 }
 
-inline Matrix Matrix::ident(usize w, usize h) {
-	auto mat = Matrix::zero(w, h);
+inline NaiveMatrix NaiveMatrix::ident(usize w, usize h) {
+	auto mat = NaiveMatrix::zero(w, h);
 
 	usize n = std::min(w, h);
 	for (usize i = 0; i < n; i++) {
@@ -117,7 +115,7 @@ inline Matrix Matrix::ident(usize w, usize h) {
 	return mat;
 }
 
-inline Matrix Matrix::from_arr(usize w, usize h, const std::initializer_list<scalar> &arr) {
+inline NaiveMatrix NaiveMatrix::from_arr(usize w, usize h, const std::initializer_list<scalar> &arr) {
 	db_assert(w * h == arr.size());
 	auto mat = uninit_matrix(w, h);
 
@@ -130,7 +128,7 @@ inline Matrix Matrix::from_arr(usize w, usize h, const std::initializer_list<sca
 	return mat;
 }
 
-inline Matrix Matrix::clone(const Matrix &source) {
+inline NaiveMatrix NaiveMatrix::clone(const NaiveMatrix &source) {
 	auto mat = init_mat(source.width, source.height);
 	for (usize i = 0; i < mat.count(); i++) {
 		mat.set(i, source.get(i));
@@ -138,7 +136,7 @@ inline Matrix Matrix::clone(const Matrix &source) {
 	return mat;
 }
 
-inline void Matrix::destroy(Matrix *m) {
+inline void NaiveMatrix::destroy(NaiveMatrix *m) {
 	db_assert(m->data != nullptr);
 
 	if (m-> width > 0 && m->height > 0) {
@@ -149,89 +147,47 @@ inline void Matrix::destroy(Matrix *m) {
 	}
 }
 
-/* specify generic matrix interface functions with this implementation */
-namespace matrix {
-
-	Matrix zero(usize w, usize h) {
-		return Matrix::zero(w, h);
-	}
-
-	Matrix ident(usize w, usize h) {
-		return Matrix::ident(w, h);
-	}
-
-	void set(Matrix *m, usize x, usize y, scalar val) {
-		m->set(x, y, val);
-	}
-
-	Matrix add(const Matrix &m1, const Matrix &m2) {
-		return Matrix::add(m1, m2);
-	}
-
-	Matrix mul(const Matrix &m1, const Matrix &m2) {
-		return Matrix::mul(m1, m2);
-	}
-
-    bool eq(const Matrix &m1, const Matrix &m2) {
-        return Matrix::eq(m1, m2);
-    }
-
-    void destroy(Matrix *m) {
-        Matrix::destroy(m);
-    }
-
-	void print(const Matrix &m) {
-		for (usize y = 0; y < m.height; y++) {
-			for (usize x = 0; x < m.width; x++) {
-				std::cout << std::setw(4) << m.get(x, y) << " ";
-			}
-			std::cout << "\n";
-		}
-	}
-}
-
-
 TEST(matrix_eq, {
-    auto m1 = Matrix::zero(120, 312);
+    auto m1 = NaiveMatrix::zero(120, 312);
     for (usize indx = 0; indx < m1.count(); indx++) {
         float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
         m1.set(indx, r);
     }
-    auto m2 = Matrix::clone(m1);
+    auto m2 = NaiveMatrix::clone(m1);
 
-    test_assert(Matrix::eq(m1, m2));
+    test_assert(NaiveMatrix::eq(m1, m2));
 
     return {};
 })
 
 TEST(matrix_mul, {
     {
-        auto m1 = Matrix::from_arr(3, 3, {6.f, 2.f, 4.f, -1.f, 4.f, 3.f, -2.f, 9.f, 3.f,});
-        auto m2 = Matrix::from_arr(1, 3, {4.f, -2.f, -1.f});
-        auto m3 = Matrix::from_arr(1, 3, {16, -15, -29});
-        defer(Matrix::destroy(&m1));
-        defer(Matrix::destroy(&m2));
-        defer(Matrix::destroy(&m3));
+        auto m1 = NaiveMatrix::from_arr(3, 3, {6.f, 2.f, 4.f, -1.f, 4.f, 3.f, -2.f, 9.f, 3.f,});
+        auto m2 = NaiveMatrix::from_arr(1, 3, {4.f, -2.f, -1.f});
+        auto m3 = NaiveMatrix::from_arr(1, 3, {16, -15, -29});
+        defer(NaiveMatrix::destroy(&m1));
+        defer(NaiveMatrix::destroy(&m2));
+        defer(NaiveMatrix::destroy(&m3));
 
-        test_assert(Matrix::eq(m3, Matrix::mul(m1, m2)), "mul 1");
+        test_assert(NaiveMatrix::eq(m3, NaiveMatrix::mul(m1, m2)), "mul 1");
     }
 
     {
-        auto m1 = Matrix::from_arr(3, 3, {6.f, 2.f, 4.f, -1.f, 4.f, 3.f, -2.f, 9.f, 3.f,});
-        auto m2 = Matrix::from_arr(1, 3, {4.f, -2.f, -1.f});
-        auto m3 = Matrix::from_arr(1, 3, {17, -15, -29});
-        defer(Matrix::destroy(&m1));
-        defer(Matrix::destroy(&m2));
-        defer(Matrix::destroy(&m3));
+        auto m1 = NaiveMatrix::from_arr(3, 3, {6.f, 2.f, 4.f, -1.f, 4.f, 3.f, -2.f, 9.f, 3.f,});
+        auto m2 = NaiveMatrix::from_arr(1, 3, {4.f, -2.f, -1.f});
+        auto m3 = NaiveMatrix::from_arr(1, 3, {17, -15, -29});
+        defer(NaiveMatrix::destroy(&m1));
+        defer(NaiveMatrix::destroy(&m2));
+        defer(NaiveMatrix::destroy(&m3));
 
-        test_assert(!Matrix::eq(m3, Matrix::mul(m1, m2)), "mul 2");
+        test_assert(!NaiveMatrix::eq(m3, NaiveMatrix::mul(m1, m2)), "mul 2");
     }
 
     return {};
 })
 
 TEST(matrix_ident, {
-    auto ident = Matrix::ident(5, 5);
+    auto ident = NaiveMatrix::ident(5, 5);
     for (usize x = 0; x < ident.width; x++) {
         for (usize y = 0; y < ident.width; y++) {
             if (x == y) {
