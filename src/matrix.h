@@ -23,6 +23,9 @@ static_assert(is_defined<Matrix3x2>);
 static_assert(is_defined<Vector3>);
 static_assert(is_defined<IVector3>);
 
+static_assert(is_defined<Triplet>);
+static_assert(is_defined<index_t>);
+
 
 // dynamic size
 
@@ -67,14 +70,20 @@ namespace linalg {
 
 
     // getters
-    scalar get(const Matrix3x3 &, index_t x, index_t y);
-    scalar get(const Matrix2x3 &, index_t x, index_t y);
-    scalar get(const Matrix3x2 &, index_t x, index_t y);
+    scalar get(const Matrix3x3 &, index_t, index_t);
+    scalar get(const Matrix2x3 &, index_t, index_t);
+    scalar get(const Matrix3x2 &, index_t, index_t);
+    scalar get(const Vector3   &, index_t);
+    scalar get(const IVector3  &, index_t);
+    scalar get(const VectorDyn &, index_t);
 
     // setters
-    void set(Matrix3x3 *, index_t x, index_t y, scalar);
-    void set(Matrix2x3 *, index_t x, index_t y, scalar);
-    void set(Matrix3x2 *, index_t x, index_t y, scalar);
+    void set(Matrix3x3 *, index_t, index_t, scalar);
+    void set(Matrix2x3 *, index_t, index_t, scalar);
+    void set(Matrix3x2 *, index_t, index_t, scalar);
+    void get(Vector3   *, index_t, scalar);
+    void get(IVector3  *, index_t, scalar);
+    void get(VectorDyn *, index_t, scalar);
 
 
     // multiplications

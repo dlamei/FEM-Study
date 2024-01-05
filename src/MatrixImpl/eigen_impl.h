@@ -36,25 +36,25 @@ typedef matrix_impl::Vector<Eigen::Dynamic> VectorDyn;
 namespace linalg {
 
     inline Matrix3x3 init_mat3x3(
-        scalar m11, scalar m21, scalar m31,
-        scalar m12, scalar m22, scalar m32,
-        scalar m13, scalar m23, scalar m33)
+        scalar s11, scalar s21, scalar s31,
+        scalar s12, scalar s22, scalar s32,
+        scalar s13, scalar s23, scalar s33)
     {
         Matrix3x3 m;
-        m << m11, m21, m31,
-             m12, m22, m32,
-             m13, m23, m33;
+        m << s11, s21, s31,
+             s12, s22, s32,
+             s13, s23, s33;
 
         return m;
     }
 
     inline Matrix2x3 init_mat2x3(
-        scalar m11, scalar m21, scalar m31,
-        scalar m12, scalar m22, scalar m32)
+        scalar s11, scalar s21, scalar s31,
+        scalar s12, scalar s22, scalar s32)
     {
         Matrix2x3 m;
-        m << m11, m21, m31,
-             m12, m22, m32;
+        m << s11, s21, s31,
+             s12, s22, s32;
 
         return m;
     }
@@ -65,15 +65,15 @@ namespace linalg {
         return sparse;
     }
 
-    inline Vector3 init_fvec3(scalar v1, scalar v2, scalar v3) {
+    inline Vector3 init_fvec3(scalar s1, scalar s2, scalar s3) {
         Vector3 v;
-        v << v1, v2, v3;
+        v << s1, s2, s3;
         return v;
     }
 
-    inline IVector3 init_ivec3(i32 v1, i32 v2, i32 v3) {
+    inline IVector3 init_ivec3(i32 s1, i32 s2, i32 s3) {
         IVector3 v;
-        v << v1, v2, v3;
+        v << s1, s2, s3;
         return v;
     }
 
@@ -90,17 +90,21 @@ namespace linalg {
     inline scalar get(const Matrix3x3 &m, index_t x, index_t y) { return m(x, y); };
     inline scalar get(const Matrix2x3 &m, index_t x, index_t y) { return m(x, y); };
     inline scalar get(const Matrix3x2 &m, index_t x, index_t y) { return m(x, y); };
+    inline scalar get(const Vector3   &v, index_t x) { return v(x); };
+    inline scalar get(const IVector3  &v, index_t x) { return v(x); };
+    inline scalar get(const VectorDyn &v, index_t x) { return v(x); };
 
-    inline void set(Matrix3x3 *m, index_t x, index_t y, scalar v) { (*m)(x, y) = v; };
-    inline void set(Matrix2x3 *m, index_t x, index_t y, scalar v) { (*m)(x, y) = v; };
-    inline void set(Matrix3x2 *m, index_t x, index_t y, scalar v) { (*m)(x, y) = v; };
+    inline void set(Matrix3x3 *m, index_t x, index_t y, scalar s) { (*m)(x, y) = s; };
+    inline void set(Matrix2x3 *m, index_t x, index_t y, scalar s) { (*m)(x, y) = s; };
+    inline void set(Matrix3x2 *m, index_t x, index_t y, scalar s) { (*m)(x, y) = s; };
+    inline void set(Vector3   *v, index_t x, scalar s) { (*v)(x) = s; };
+    inline void set(IVector3  *v, index_t x, scalar s) { (*v)(x) = s; };
+    inline void set(VectorDyn *v, index_t x, scalar s) { (*v)(x) = s; };
 
-    inline void elem_mul(Matrix3x3 *m, scalar v) { (*m) *= v; };
-    inline void elem_mul(Vector3 *vec, scalar v) { (*vec) *= v; };
+    inline void elem_mul(Matrix3x3 *m, scalar s) { (*m) *= s; };
+    inline void elem_mul(Vector3   *v, scalar s) { (*v) *= s; };
 
-    inline Matrix3x3 mat3x2_mul_mat2x3(const Matrix3x2 &m1, const Matrix2x3 &m2) {
-        return m1 * m2;
-    }
+    inline Matrix3x3 mat3x2_mul_mat2x3(const Matrix3x2 &m1, const Matrix2x3 &m2) { return m1 * m2; }
 
 
     // solve functions
