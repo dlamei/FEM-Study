@@ -11,9 +11,9 @@ using matrix_t = std::vector<std::vector<scalar>>;
 using vector_t = std::vector<scalar>;
 
 struct Mesh {
-    usize nof_vertices{};
-    usize nof_triangles{};
-    usize nof_boundry_edges{};
+    usize nof_vertices{ 0 };
+    usize nof_triangles{ 0 };
+    usize nof_boundry_edges{ 0 };
 
     // Matrix containing x and y coordinates of vertices
     // dimension: nof_vertices * 2

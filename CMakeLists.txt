@@ -7,8 +7,8 @@ add_subdirectory(libs/eigen)
 
 set(SOURCES
 	src/utils.h
-	src/Geometries/geometry.h 
-	src/Geometries/geometry.cpp
+	src/Geometries/geometry_eigen.h 
+	src/Geometries/geometry_eigen.cpp
 	src/matrix.cpp src/matrix.h
     src/FEM.h src/FEM.cpp
 	)

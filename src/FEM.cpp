@@ -6,7 +6,6 @@
 
 
 scalar triangle_area(const Triangle &t);
-Triangle tri_from_indx(const Mesh &mesh, usize indx);
 
 /*
  *  l1, l2, l3 on triangle K => barycentric coords functions
@@ -70,10 +69,10 @@ inline Vector<3> local_load_vec(const Triangle &tri, source_fn_ptr source_fn) {
  *
  */
 
-SparseMatrix assemble_gelerkin_mat(const Mesh &mesh) {
+SparseMatrix assemble_gelerkin_mat(const Geometry::Mesh &mesh) {
 
-    usize n_verts = mesh.n_nodes;
-    usize n_cells = mesh.n_triangles;
+    usize n_verts = mesh.nof_nodes;
+    usize n_cells = mesh.nof_triangles;
 
     // TODO: #nnz estimation for resizing triplets vector
     std::vector<Eigen::Triplet<scalar>> triplets;
@@ -82,7 +81,7 @@ SparseMatrix assemble_gelerkin_mat(const Mesh &mesh) {
 
         Eigen::Vector3i tri_indices = mesh.triangles.row(i);
 
-        Triangle tri = tri_from_indx(mesh, i);
+        Triangle tri = mesh.get_tria_coords(i);
         Matrix<3, 3> elem_mat = local_elem_mat(tri);
 
         // loop unrolled of
@@ -115,15 +114,15 @@ SparseMatrix assemble_gelerkin_mat(const Mesh &mesh) {
 
 
 
-Vector<Dim::Dynamic> assemble_load_vec(const Mesh &mesh, source_fn_ptr source_fn) {
-    usize n_nodes = mesh.n_nodes;
-    usize n_tris = mesh.n_triangles;
+Vector<Dim::Dynamic> assemble_load_vec(const Geometry::Mesh &mesh, source_fn_ptr source_fn) {
+    usize n_nodes = mesh.nof_nodes;
+    usize n_tris = mesh.nof_triangles;
 
     Vector<Dim::Dynamic> phi = Vector<Dim::Dynamic>::Zero(n_nodes);
 
     for (usize i = 0; i < n_tris; i++) {
         Eigen::Vector3i tri_indices = mesh.triangles.row(i);
-        Triangle tri = tri_from_indx(mesh, i);
+        Triangle tri = mesh.get_tria_coords(i);
 
         Vector<3> local_phi = local_load_vec(tri, source_fn);
 
@@ -137,7 +136,7 @@ Vector<Dim::Dynamic> assemble_load_vec(const Mesh &mesh, source_fn_ptr source_fn
 
 //* SOLVING *//
 
-Vector<Dim::Dynamic> solve_fem(const Mesh &mesh, source_fn_ptr source_fn) {
+Vector<Dim::Dynamic> solve_fem(const Geometry::Mesh &mesh, source_fn_ptr source_fn) {
     SparseMatrix a = assemble_gelerkin_mat(mesh);
     Vector<Dim::Dynamic> phi = assemble_load_vec(mesh, source_fn);
 
@@ -158,66 +157,3 @@ inline scalar triangle_area(const Triangle &t) {
             (t(0, 2) - t(0, 1)) * (t(1, 1) - t(1, 0)));
 }
 
-
-inline Triangle tri_from_indx(const Mesh &mesh, usize indx) {
-    Eigen::Vector3i tri_indices = mesh.triangles.row(indx);
-
-    Matrix<3, 2> vert_coords;
-    vert_coords << mesh.nodes.row(tri_indices[0]),
-                mesh.nodes.row(tri_indices[1]),
-                mesh.nodes.row(tri_indices[2]);
-
-    return vert_coords.transpose();
-}
-
-
-Mesh Mesh::load(const std::string &file_name) {
-    std::fstream input;
-    input.open(file_name);
-
-    assert(input.is_open(), "Failed to open mesh file");
-
-    usize n_verts = 0;
-    usize n_tris = 0;
-    usize n_boundry_edges = 0;
-    input >> n_verts;
-    input >> n_tris;
-    input >> n_boundry_edges;
-    assert((n_verts >= 0 && n_tris >= 0 && n_boundry_edges >= 0), 
-            "Error nof_vertices, nof_triangles or nof_boundry_edges is an invalid input");
-
-    auto nodes = Eigen::Matrix<scalar, Dim::Dynamic, 2>(n_verts, 2);
-    for (usize i = 0; i < n_verts; i++) {
-        scalar x{}, y{};
-        u64 boundary_label;
-        input >> x;
-        input >> y;
-        input >> boundary_label;
-        nodes(i, 0) = x;
-        nodes(i, 1) = y;
-    }
-
-    auto tris = Eigen::Matrix<int, Dim::Dynamic, 3>(n_tris, 3);
-    for(int i = 0; i < n_tris; ++i) {
-        u64 l, m, n;
-        u64 boundry_label;
-        input >> l;
-        input >> m;
-        input >> n;
-        input >> boundry_label;
-        tris(i, 0) = l - 1;
-        tris(i, 1) = m - 1;
-        tris(i, 2) = n - 1;
-    }
-
-
-    Mesh mesh {
-        .n_nodes = n_verts,
-            .n_triangles = n_tris,
-            .nodes = nodes,
-            .triangles = tris,
-    };
-
-    return mesh;
-
-};
