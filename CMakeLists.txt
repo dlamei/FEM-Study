@@ -23,7 +23,11 @@ target_compile_definitions(FEM_TEST PRIVATE COMPILE_TESTS)
 find_package(Threads)
 target_link_libraries(FEM_TEST ${CMAKE_THREAD_LIBS_INIT} eigen)
 
-
+# profiling
+add_executable(FEM_PROFILE ${SOURCES} src/main.cpp)
+target_link_libraries(FEM_PROFILE eigen)
+target_compile_options(FEM_PROFILE PRIVATE -pg)
+target_link_options(FEM_PROFILE PRIVATE -pg)
 
 # custom targets 
 add_custom_target(r DEPENDS run)
@@ -37,5 +41,13 @@ add_custom_target(t DEPENDS test)
 add_custom_target(test
 	COMMAND echo "running tests..." && echo "" && ./FEM_TEST
 	DEPENDS FEM_TEST
+	WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+	)
+
+add_custom_target(p DEPENDS profile)
+add_custom_target(profile
+	COMMAND echo "running profiling..." && echo "" && ./FEM_PROFILE
+	COMMAND ../scripts/run_profiling.sh
+	DEPENDS FEM_PROFILE
 	WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 	)

@@ -1,6 +1,7 @@
 #include "FEM.h"
 #include <fstream>
 #include <iostream>
+#include <set>
 
 
 
@@ -107,13 +108,20 @@ SparseMatrix assemble_gelerkin_mat(const Geometry::Mesh &mesh) {
     }
 
     // Boundry conditions
+    std::set<int> rowsToRemove;
     for(auto row : mesh.boundries.at(0)) {
-        // Remove boundry elements
-        triplets.erase(std::remove_if(triplets.begin(), triplets.end(), [row](Eigen::Triplet<scalar> &t)
-        { return t.row() == row; }), triplets.end());
-        // Set diagonals to 1.0
+        rowsToRemove.insert(row);
+    }
+
+    triplets.erase(std::remove_if(triplets.begin(), triplets.end(), 
+        [&rowsToRemove](const Eigen::Triplet<scalar> &t) {
+            return rowsToRemove.find(t.row()) != rowsToRemove.end();
+        }), triplets.end());
+
+    for(auto row : mesh.boundries.at(0)) {
         triplets.push_back(Eigen::Triplet<scalar>(row, row, 1.0));
     }
+
     
 
     SparseMatrix galerkin(n_verts, n_verts);
