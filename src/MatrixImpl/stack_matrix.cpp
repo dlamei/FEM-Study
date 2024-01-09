@@ -1,8 +1,8 @@
 #include "stack_matrix.h"
 
-namespace linalg {
+namespace stack_matrix {
 
-    inline Matrix3x3 init_mat3x3(
+    inline Matrix3x3 Matrix3x3::init(
             scalar s11, scalar s21, scalar s31,
             scalar s12, scalar s22, scalar s32,
             scalar s13, scalar s23, scalar s33)
@@ -16,11 +16,28 @@ namespace linalg {
         };
     }
 
-    inline Matrix2x3 init_mat2x3(
+    inline scalar Matrix3x3::get(index_t x, index_t y) const {
+        db_assert(x < 3);
+        db_assert(y < 3);
+        return data[x + y * 3];
+    }
+
+    inline void Matrix3x3::set(index_t x, index_t y, scalar s) {
+        db_assert(x < 3);
+        db_assert(y < 3);
+        data[x + y * 3] = s;
+    }
+
+    inline void Matrix3x3::mul(scalar s) {
+        for (u32 i = 0; i < 9; i++) data[i] *= s;
+    }
+
+
+    inline Matrix3x2 Matrix3x2::init(
             scalar s11, scalar s21, scalar s31,
             scalar s12, scalar s22, scalar s32) 
     {
-        return Matrix2x3 {
+        return Matrix3x2 {
             .data = {
                 s11, s21, s31,  
                 s12, s22, s32, 
@@ -28,139 +45,56 @@ namespace linalg {
         };
     }
 
-    inline Matrix3x2 init_mat3x2(
+    inline scalar Matrix3x2::get(index_t x, index_t y) const {
+        db_assert(x < 3);
+        db_assert(y < 2);
+        return data[x + y * 3];
+    }
+
+    inline void Matrix3x2::set(index_t x, index_t y, scalar s) {
+        db_assert(x < 3);
+        db_assert(y < 2);
+        data[x + y * 3] = s;
+    }
+
+    inline Matrix2x3 Matrix2x3::init(
             scalar s11, scalar s21,
             scalar s12, scalar s22,
             scalar s13, scalar s23)
     {
-        return Matrix3x2 {
+        return Matrix2x3 {
             .data = {
                 s11, s21,
                 s12, s22,
                 s13, s23
             },
         };
-
     }
 
-    inline Vector3 init_vec3(scalar s1, scalar s2, scalar s3) {
-        return Vector3 {
-            .data = { s1, s2, s3 },
-        };
+    inline scalar Matrix2x3::get(index_t x, index_t y) const {
+        db_assert(x < 2);
+        db_assert(y < 3);
+        return data[x + y * 2];
     }
 
-    inline Vector2 init_vec2(scalar s1, scalar s2) {
-        return Vector2 {
-            .data = { s1, s2 },
-        };
+    inline void Matrix2x3::set(index_t x, index_t y, scalar s) {
+        db_assert(x < 2);
+        db_assert(y < 3);
+        data[x + y * 2] = s;
     }
 
-    inline IVector3 init_ivec3(i32 i1, i32 i2, i32 i3) {
-        return IVector3 {
-            .data = { i1, i2, i3 },
-        };
-    };
-
-
-    // setters
-
-    inline void set(Matrix3x3 *m, index_t x, index_t y, scalar s) {
-        assert(x < 3);
-        assert(y < 3);
-
-        index_t index = x + y * 3;
-        m->data[index] = s;
-    };
-
-    inline void set(Matrix2x3 *m, index_t x, index_t y, scalar s) {
-        assert(x < 2);
-        assert(y < 3);
-
-        index_t index = x + y * 2;
-        m->data[index] = s;
-    };
-
-    inline void set(Matrix3x2 *m, index_t x, index_t y, scalar s) {
-        assert(x < 3);
-        assert(y < 2);
-
-        index_t index = x + y * 3;
-        m->data[index] = s;
-    };
-
-    inline void set(Vector3   *v, index_t x, scalar s) {
-        assert(x < 3);
-        v->data[x] = s;
-    };
-
-    inline void set(Vector2   *v, index_t x, scalar s) {
-        assert(x < 2);
-        v->data[x] = s;
-    };
-
-    inline void set(IVector3   *v, index_t x, scalar s) {
-        assert(x < 3);
-        v->data[x] = s;
-    };
-
-    // getters
-
-    inline scalar get(const Matrix3x3 &m, index_t x, index_t y) {
-        assert(x < 3);
-        assert(y < 3);
-
-        index_t index = x + y * 3;
-        return m.data[index];
-    };
-
-    inline scalar get(const Matrix2x3 &m, index_t x, index_t y) {
-        assert(x < 2);
-        assert(y < 3);
-
-        index_t index = x + y * 2;
-        return m.data[index];
-    };
-
-    inline scalar get(const Matrix3x2 &m, index_t x, index_t y) {
-        assert(x < 3);
-        assert(y < 2);
-
-        index_t index = x + y * 3;
-        return m.data[index];
-    };
-
-    inline scalar get(const Vector3   &v, index_t x) {
-        assert(x < 3);
-        return v.data[x];
-    };
-
-    inline scalar get(const Vector2   &v, index_t x) {
-        assert(x < 2);
-        return v.data[x];
-    };
-
-    inline scalar get(const IVector3  &v, index_t x) {
-        assert(x < 3);
-        return v.data[x];
-    };
-
-
-    inline void elem_mul(Matrix3x3 *m, scalar s) {
-        for (u32 i = 0; i < 9; i++) {
-            m->data[i] *= s;
-        }
-    };
-
-    inline void elem_mul(Vector3 *v, scalar s) {
-        v->data[0] *= s;
-        v->data[1] *= s;
-        v->data[2] *= s;
-    };
+    inline Matrix3x2 Matrix2x3::transpose() const {
+        return Matrix3x2::init(
+                get(0, 0), get(0, 1), get(0, 2),
+                get(1, 0), get(1, 2), get(1, 2)
+                );
+    }
 
     inline scalar row_mul_col(const Matrix3x2 &m1, u32 row, const Matrix2x3 &m2, u32 col) {
-        return  get(m1, 0, row) * get(m2, col, 0) +
-                get(m1, 1, row) * get(m2, col, 1) +
-                get(m1, 2, row) * get(m2, col, 2);
+        return 
+            m1.get(0, row) * m2.get(col, 0) +
+            m1.get(0, row) * m2.get(col, 0) +
+            m1.get(0, row) * m2.get(col, 0);
     }
 
     Matrix3x3 mat3x2_mul_mat2x3(const Matrix3x2 &m1, const Matrix2x3 &m2) {
@@ -176,11 +110,17 @@ namespace linalg {
         scalar m32 = row_mul_col(m1, 1, m2, 2);
         scalar m33 = row_mul_col(m1, 2, m2, 2);
 
-        return init_mat3x3(
+        return Matrix3x3::init(
                 m11, m21, m31,
                 m12, m22, m32,
                 m13, m23, m33
                 );
     };
 
-    } // namespace linalg
+    inline void Vector3::mul(scalar s) {
+        x *= s;
+        y *= s;
+        z *= s;
+    };
+
+} // namespace stack_matrix

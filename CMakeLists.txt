@@ -9,7 +9,6 @@ set(SOURCES
 	src/utils.h
 	src/Geometries/geometry.h 
 	src/Geometries/geometry.cpp
-	src/matrix.cpp src/matrix.h
     src/FEM.h src/FEM.cpp
 	)
 
