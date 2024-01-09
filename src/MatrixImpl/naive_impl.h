@@ -2,7 +2,6 @@
 #pragma once
 
 #include "../utils.h"
-#include "../matrix.h"
 
 namespace matrix_impl {
 
@@ -56,4 +55,32 @@ namespace matrix_impl {
         // deallocate matrix memory
         static void destroy(Naive *mat);
     };
+}
+
+#include "stack_matrix.h"
+
+#include <Eigen/Eigen>
+
+namespace linalg {
+
+
+    // temp fallback
+    typedef Eigen::Triplet<scalar, index_t> Triplet;
+
+    typedef Eigen::SparseMatrix<scalar> SparseMatrix;
+    typedef Eigen::Matrix<scalar, Eigen::Dynamic, 1> VectorDyn;
+
+    inline SparseMatrix sparse_from_triplets(u32 w, u32 h, Triplet *begin, usize n) {
+        SparseMatrix sparse(w, h);
+        sparse.setFromTriplets(begin, begin + n);
+        return sparse;
+    }
+
+    inline VectorDyn solve(const SparseMatrix &m, const VectorDyn &v) {
+        Eigen::SparseLU<SparseMatrix, Eigen::COLAMDOrdering<int>> solver;
+        solver.analyzePattern(m);
+        solver.factorize(m);
+        return solver.solve(v);
+    }
+    
 }

@@ -17,23 +17,23 @@ namespace matrix_impl {
     typedef Eigen::SparseMatrix<scalar> SparseMatrix;
 }
 
-// map linalg types to eigen
-
-typedef matrix_impl::Matrix<3, 3>   Matrix3x3;
-typedef matrix_impl::Matrix<2, 3>   Matrix2x3;
-typedef matrix_impl::Matrix<3, 2>   Matrix3x2;
-typedef matrix_impl::Vector<3>      Vector3;
-typedef matrix_impl::IVector<3>     IVector3;
-
-typedef u32 index_t;
-typedef Eigen::Triplet<scalar, index_t> Triplet;
-
-typedef matrix_impl::SparseMatrix SparseMatrix;
-typedef matrix_impl::Vector<Eigen::Dynamic> VectorDyn;
-
 
 // map linalg functions to eigen
 namespace linalg {
+    
+    // map linalg types to eigen
+    
+    typedef matrix_impl::Matrix<3, 3>   Matrix3x3;
+    typedef matrix_impl::Matrix<2, 3>   Matrix2x3;
+    typedef matrix_impl::Matrix<3, 2>   Matrix3x2;
+    typedef matrix_impl::Vector<3>      Vector3;
+    typedef matrix_impl::IVector<3>     IVector3;
+    
+    typedef u32 index_t;
+    typedef Eigen::Triplet<scalar, index_t> Triplet;
+    
+    typedef matrix_impl::SparseMatrix SparseMatrix;
+    typedef matrix_impl::Vector<Eigen::Dynamic> VectorDyn;
 
     inline Matrix3x3 init_mat3x3(
         scalar s11, scalar s21, scalar s31,

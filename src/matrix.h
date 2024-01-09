@@ -11,31 +11,31 @@
 #include BACKEND_HEADER
 
 
-/* TYPES DEFINED BY BACKEND */
-
-
-// fixed size
-
-static_assert(is_defined<Matrix3x3>);
-static_assert(is_defined<Matrix2x3>);
-static_assert(is_defined<Matrix3x2>);
-
-static_assert(is_defined<Vector3>);
-static_assert(is_defined<IVector3>);
-
-static_assert(is_defined<Triplet>);
-static_assert(is_defined<index_t>);
-
-
-// dynamic size
-
-static_assert(is_defined<SparseMatrix>);
-static_assert(is_defined<VectorDyn>);
-
-
-/* FUNCTIONS DEFINED BY BACKEND */
-
 namespace linalg {
+
+    /* TYPES DEFINED BY BACKEND */
+
+
+    // fixed size
+
+    static_assert(is_defined<Matrix3x3>);
+    static_assert(is_defined<Matrix2x3>);
+    static_assert(is_defined<Matrix3x2>);
+
+    static_assert(is_defined<Vector3>);
+    static_assert(is_defined<IVector3>);
+
+    static_assert(is_defined<Triplet>);
+    static_assert(is_defined<index_t>);
+
+
+    // dynamic size
+
+    static_assert(is_defined<SparseMatrix>);
+    static_assert(is_defined<VectorDyn>);
+
+
+    /* FUNCTIONS DEFINED BY BACKEND */
 
 
     // constructors
@@ -91,7 +91,6 @@ namespace linalg {
     void elem_mul(Vector3 *, scalar);
 
     Matrix3x3 mat3x2_mul_mat2x3(const Matrix3x2 &, const Matrix2x3 &);
-
 
     // solve functions
     void inverse_inplace(Matrix3x3 *);
