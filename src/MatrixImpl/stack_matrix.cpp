@@ -43,9 +43,15 @@ namespace linalg {
 
     }
 
-    inline Vector3 init_fvec3(scalar s1, scalar s2, scalar s3) {
+    inline Vector3 init_vec3(scalar s1, scalar s2, scalar s3) {
         return Vector3 {
             .data = { s1, s2, s3 },
+        };
+    }
+
+    inline Vector2 init_vec2(scalar s1, scalar s2) {
+        return Vector2 {
+            .data = { s1, s2 },
         };
     }
 
@@ -54,6 +60,9 @@ namespace linalg {
             .data = { i1, i2, i3 },
         };
     };
+
+
+    // setters
 
     inline void set(Matrix3x3 *m, index_t x, index_t y, scalar s) {
         assert(x < 3);
@@ -78,6 +87,23 @@ namespace linalg {
         index_t index = x + y * 3;
         m->data[index] = s;
     };
+
+    inline void set(Vector3   *v, index_t x, scalar s) {
+        assert(x < 3);
+        v->data[x] = s;
+    };
+
+    inline void set(Vector2   *v, index_t x, scalar s) {
+        assert(x < 2);
+        v->data[x] = s;
+    };
+
+    inline void set(IVector3   *v, index_t x, scalar s) {
+        assert(x < 3);
+        v->data[x] = s;
+    };
+
+    // getters
 
     inline scalar get(const Matrix3x3 &m, index_t x, index_t y) {
         assert(x < 3);
@@ -105,6 +131,11 @@ namespace linalg {
 
     inline scalar get(const Vector3   &v, index_t x) {
         assert(x < 3);
+        return v.data[x];
+    };
+
+    inline scalar get(const Vector2   &v, index_t x) {
+        assert(x < 2);
         return v.data[x];
     };
 
@@ -152,4 +183,4 @@ namespace linalg {
                 );
     };
 
-} // namespace linalg
+    } // namespace linalg

@@ -27,6 +27,7 @@ namespace linalg {
     typedef matrix_impl::Matrix<2, 3>   Matrix2x3;
     typedef matrix_impl::Matrix<3, 2>   Matrix3x2;
     typedef matrix_impl::Vector<3>      Vector3;
+    typedef matrix_impl::Vector<2>      Vector2;
     typedef matrix_impl::IVector<3>     IVector3;
     
     typedef u32 index_t;
@@ -65,9 +66,15 @@ namespace linalg {
         return sparse;
     }
 
-    inline Vector3 init_fvec3(scalar s1, scalar s2, scalar s3) {
+    inline Vector3 init_vec3(scalar s1, scalar s2, scalar s3) {
         Vector3 v;
         v << s1, s2, s3;
+        return v;
+    }
+
+    inline Vector2 init_vec2(scalar s1, scalar s2) {
+        Vector2 v;
+        v << s1, s2;
         return v;
     }
 
@@ -98,6 +105,7 @@ namespace linalg {
     inline void set(Matrix2x3 *m, index_t x, index_t y, scalar s) { (*m)(x, y) = s; };
     inline void set(Matrix3x2 *m, index_t x, index_t y, scalar s) { (*m)(x, y) = s; };
     inline void set(Vector3   *v, index_t x, scalar s) { (*v)(x) = s; };
+    inline void set(Vector2   *v, index_t x, scalar s) { (*v)(x) = s; };
     inline void set(IVector3  *v, index_t x, scalar s) { (*v)(x) = s; };
     inline void set(VectorDyn *v, index_t x, scalar s) { (*v)(x) = s; };
 

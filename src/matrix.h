@@ -23,6 +23,7 @@ namespace linalg {
     static_assert(is_defined<Matrix3x2>);
 
     static_assert(is_defined<Vector3>);
+    static_assert(is_defined<Vector2>);
     static_assert(is_defined<IVector3>);
 
     static_assert(is_defined<Triplet>);
@@ -53,8 +54,9 @@ namespace linalg {
     // create sparse matrix from n triplets
     SparseMatrix sparse_from_triplets(u32 w, u32 h, Triplet *, usize n);
 
-    Vector3 init_fvec3(scalar, scalar, scalar);
+    Vector3 init_vec3(scalar, scalar, scalar);
     IVector3 init_ivec3(i32, i32, i32);
+    Vector2 init_vec2(scalar, scalar);
 
     Matrix3x3 clone(const Matrix3x3 &);
     Matrix2x3 clone(const Matrix2x3 &);
@@ -74,6 +76,7 @@ namespace linalg {
     scalar get(const Matrix2x3 &, index_t, index_t);
     scalar get(const Matrix3x2 &, index_t, index_t);
     scalar get(const Vector3   &, index_t);
+    scalar get(const Vector2   &, index_t);
     scalar get(const IVector3  &, index_t);
     scalar get(const VectorDyn &, index_t);
 
@@ -82,6 +85,7 @@ namespace linalg {
     void set(Matrix2x3 *, index_t, index_t, scalar);
     void set(Matrix3x2 *, index_t, index_t, scalar);
     void get(Vector3   *, index_t, scalar);
+    void get(Vector2   *, index_t, scalar);
     void get(IVector3  *, index_t, scalar);
     void get(VectorDyn *, index_t, scalar);
 
