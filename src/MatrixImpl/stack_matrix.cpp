@@ -137,13 +137,13 @@ namespace linalg {
         scalar m12 = row_mul_col(m1, 1, m2, 0);
         scalar m13 = row_mul_col(m1, 2, m2, 0);
 
-        scalar m21 = row_mul_col(m1, 0, m2, 2);
-        scalar m22 = row_mul_col(m1, 1, m2, 2);
-        scalar m23 = row_mul_col(m1, 2, m2, 2);
+        scalar m21 = row_mul_col(m1, 0, m2, 1);
+        scalar m22 = row_mul_col(m1, 1, m2, 1);
+        scalar m23 = row_mul_col(m1, 2, m2, 1);
 
-        scalar m31 = row_mul_col(m1, 0, m2, 3);
-        scalar m32 = row_mul_col(m1, 1, m2, 3);
-        scalar m33 = row_mul_col(m1, 2, m2, 3);
+        scalar m31 = row_mul_col(m1, 0, m2, 2);
+        scalar m32 = row_mul_col(m1, 1, m2, 2);
+        scalar m33 = row_mul_col(m1, 2, m2, 2);
 
         return init_mat3x3(
                 m11, m21, m31,
