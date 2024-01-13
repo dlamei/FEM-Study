@@ -43,6 +43,8 @@ Triangle grad_bary_coords(const Triangle &tri) {
  */
 
 Matrix<3, 3> local_elem_mat(const Triangle &tri) {
+    PROFILE_FUNC()
+
     scalar area = triangle_area(tri);
     auto grad = grad_bary_coords(tri);
     return area * grad.transpose() * grad;
@@ -73,6 +75,7 @@ inline Vector<3> local_load_vec(const Triangle &tri, source_fn_ptr source_fn) {
  */
 
 SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
+    PROFILE_FUNC()
 
     usize n_verts = mesh.n_nodes;
     usize n_cells = mesh.n_triangles;
@@ -112,7 +115,7 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
     SparseMatrix galerkin(n_verts, n_verts);
     galerkin.setFromTriplets(triplets.begin(), triplets.end());
 
-    write_sparse_to_file(galerkin, "galerkin_mat.txt");
+    /* write_sparse_to_file(galerkin, "galerkin_mat.txt"); */
 
     return galerkin;
 }
@@ -142,6 +145,7 @@ Vector<Dim::Dynamic> assemble_load_vec(const Mesh &mesh, source_fn_ptr source_fn
 //* SOLVING *//
 
 Vector<Dim::Dynamic> solve_fem(const Mesh &mesh, source_fn_ptr source_fn) {
+
     SparseMatrix a = assemble_galerkin_mat(mesh);
     Vector<Dim::Dynamic> phi = assemble_load_vec(mesh, source_fn);
 
@@ -176,6 +180,7 @@ inline Triangle tri_from_indx(const Mesh &mesh, usize indx) {
 
 
 Mesh Mesh::load(const std::string &file_name) {
+
     std::fstream input;
     input.open(file_name);
 
@@ -227,6 +232,8 @@ Mesh Mesh::load(const std::string &file_name) {
 };
 
 void write_sparse_to_file(const SparseMatrix &m, const char *name) {
+    PROFILE_FUNC()
+
     std::ofstream file(name); 
     if (file.is_open())
     {

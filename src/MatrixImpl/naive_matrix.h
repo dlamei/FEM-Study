@@ -17,7 +17,7 @@ namespace naive_matrix {
      */
     struct Matrix {
         scalar *data{nullptr};
-        usize width {0}, height {0};
+        u64 width {0}, height {0};
 
         // get number of elements
         inline usize count() const;
@@ -39,6 +39,8 @@ namespace naive_matrix {
         // matrix multiplication
         static Matrix mul(const Matrix &a, const Matrix &b);
 
+        static void solve(Matrix *a, Matrix *b);
+
         static bool eq(const Matrix &a, const Matrix &b, float eps = SCALAR_EPS);
 
         /* constructors / destructors */
@@ -54,5 +56,7 @@ namespace naive_matrix {
 
         // deallocate matrix memory
         static void destroy(Matrix *mat);
+
+        void print();
     };
 }

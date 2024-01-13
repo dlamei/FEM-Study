@@ -1,5 +1,6 @@
 #include "FEM.h"
 
+#include "benchmark.h"
 
 #define PI 3.14159
 
@@ -12,8 +13,12 @@ scalar source_fn(const Vector<2> &x) {
 
 int main() {
 
+
     auto mesh = Mesh::load("../meshes/first_mesh_n100.msh");
     auto res = solve_fem(mesh, &source_fn);
+
+
+    benchmark::global_timer::write_to_file("benchmark.json");
 
     return 0;
 }

@@ -1,5 +1,9 @@
-#include "naive_impl.h"
+#include "naive_matrix.h"
+
 #include <cstring>
+#include <iomanip>
+
+#include <algorithm>
 
 using namespace naive_matrix;
 
@@ -10,16 +14,16 @@ using namespace naive_matrix;
 #define TO_INDEX(indx_var, x, y) \
     db_assert(x < this->width);  \
     db_assert(y < this->height); \
-    usize indx_var = x + y * this->width;
+    u64 indx_var = x + y * this->width;
 
 #define CHECK_INDX_BOUND(indx) \
     db_assert(indx < this->width * this->height);
 
 // DISCLAIMER: only allocates memory for a matrix
-Matrix uninit_matrix(usize w, usize h) {
+Matrix uninit_matrix(u64 w, u64 h) {
     Matrix mat{};
 
-    usize size = w * h * sizeof(scalar);
+    u64 size = w * h * sizeof(scalar);
     void *data = malloc(size);
     db_assert(data != NULL);
     mat.width = w;
@@ -30,33 +34,33 @@ Matrix uninit_matrix(usize w, usize h) {
 }
 
 // allocate + initialize to zero
-Matrix init_mat(usize w, usize h) {
+Matrix init_mat(u64 w, u64 h) {
     Matrix mat = uninit_matrix(w, h);
     std::memset(mat.data, 0, w * h * sizeof(scalar));
     return mat;
 }
 
 
-inline usize Matrix::count() const {
+inline u64 Matrix::count() const {
     return this->width * this->height; 
 }
 
-inline scalar Matrix::get(usize indx) const {
+inline scalar Matrix::get(u64 indx) const {
     CHECK_INDX_BOUND(indx);
     return this->data[indx];
 }
 
-inline scalar Matrix::get(usize x, usize y) const {
+inline scalar Matrix::get(u64 x, u64 y) const {
     TO_INDEX(indx, x, y);
     return this->get(indx);
 }
 
-inline void Matrix::set(usize indx, scalar val) {
+inline void Matrix::set(u64 indx, scalar val) {
     CHECK_INDX_BOUND(indx);
     this->data[indx] = val;
 }
 
-inline void Matrix::set(usize x, usize y, scalar val) {
+inline void Matrix::set(u64 x, u64 y, scalar val) {
     TO_INDEX(indx, x, y);
     this->data[indx] = val;
 }
@@ -64,7 +68,7 @@ inline void Matrix::set(usize x, usize y, scalar val) {
 void Matrix::add_assign(Matrix *a, const Matrix &b) {
     db_assert(a->width == b.width);
     db_assert(a->height == b.height);
-    for (usize indx = 0; indx < a->count(); indx++) {
+    for (u64 indx = 0; indx < a->count(); indx++) {
         scalar sum = a->get(indx) + b.get(indx);
         a->set(indx, sum);
     }
@@ -80,10 +84,10 @@ Matrix Matrix::mul(const Matrix &a, const Matrix &b) {
     db_assert(a.width == b.height);
     auto res = uninit_matrix(b.width, a.height);
 
-    for (usize i = 0; i < b.width; i++) {
-        for (usize j = 0; j < a.height; j++) {
+    for (u64 i = 0; i < b.width; i++) {
+        for (u64 j = 0; j < a.height; j++) {
             scalar sum = 0;
-            for (usize k = 0; k < a.width; k++) {
+            for (u64 k = 0; k < a.width; k++) {
                 sum += a.get(k, j) * b.get(i, k);
             }
             res.set(i, j, sum);
@@ -93,36 +97,94 @@ Matrix Matrix::mul(const Matrix &a, const Matrix &b) {
     return res;
 }
 
+
+void Matrix::solve(Matrix *a, Matrix *b) {
+    assert(a->width == a->height);
+    assert(a->width == b->width);
+
+    u64 K = a->width;
+
+    scalar *A = a->data;
+    scalar *B = b->data;
+
+    for (u64 j = 0; j < K; j++) {
+        scalar max_val = std::abs(A[K * j + j]);
+
+        u64 max_row = j;
+
+        for (u64 i = j + 1; i < K; i++) {
+
+            scalar abs = A[K * j + i];
+            if (abs > max_val) {
+                max_val = abs;
+                max_row = i;
+            }
+        }
+
+        for (u64 l = 0; l < K; l++) {
+            scalar temp = A[K * l + max_row];
+            A[K * l + max_row] = A[K * l + j];
+            A[K * l + j] = temp;
+        }
+
+        scalar temp = B[max_row];
+        B[max_row] = B[j];
+        B[j] = temp;
+
+
+        for (u64 i = j; i < K - 1; i++) {
+            scalar c = -A[K * j + (i + 1)] / A[K * j + j];
+
+            for (u64 l = j + 1; l < K; l++) {
+                A[K * l + (i + 1)] += c * A[K * l + j];
+            }
+
+            B[i + 1] += c * B[j];
+        }
+    }
+
+    for (u64 j = K - 1; j > 0; j--) {
+        for (u64 i = j - 1; i >= 0; i--) {
+            B[i] -= B[j] * A[K * j + i] / A[K * j + j];
+        }
+    }
+
+    for (u64 j = 0; j < K; j++) {
+        B[j] *= 1.f / A[K * j + j];
+    }
+}
+
+
 bool Matrix::eq(const Matrix &a, const Matrix &b, float eps) {
     if (a.width != b.width || a.height != b.height) return false;
 
-    for (usize i = 0; i < a.count(); i++) {
+    for (u64 i = 0; i < a.count(); i++) {
         if (!cmp_scalar(a.get(i), b.get(i), eps)) return false;
     }
 
     return true;
 }
 
-inline Matrix Matrix::zero(usize w, usize h) {
+inline Matrix Matrix::zero(u64 w, u64 h) {
     auto mat = init_mat(w, h);
     return mat;
 }
 
-inline Matrix Matrix::ident(usize w, usize h) {
+inline Matrix Matrix::ident(u64 w, u64 h) {
     auto mat = Matrix::zero(w, h);
 
-    usize n = std::min(w, h);
-    for (usize i = 0; i < n; i++) {
+    u64 n = std::min(w, h);
+    for (u64 i = 0; i < n; i++) {
         mat.set(i, i, 1.f);
     }
     return mat;
 }
 
-inline Matrix Matrix::from_arr(usize w, usize h, const std::initializer_list<scalar> &arr) {
+inline Matrix Matrix::from_arr(u64 w, u64 h, const std::initializer_list<scalar> &arr) {
     db_assert(w * h == arr.size());
     auto mat = uninit_matrix(w, h);
 
-    usize indx = 0;
+    u64 indx = 0;
     for (scalar val : arr) {
         mat.set(indx, val);
         indx++;
@@ -133,7 +195,7 @@ inline Matrix Matrix::from_arr(usize w, usize h, const std::initializer_list<sca
 
 inline Matrix Matrix::clone(const Matrix &source) {
     auto mat = init_mat(source.width, source.height);
-    for (usize i = 0; i < mat.count(); i++) {
+    for (u64 i = 0; i < mat.count(); i++) {
         mat.set(i, source.get(i));
     }
     return mat;
@@ -150,13 +212,22 @@ inline void Matrix::destroy(Matrix *m) {
     }
 }
 
+void Matrix::print() {
+    for (u64 i = 0; i < width; i++) {
+        for (u64 j = 0; j < width; j++) {
+            std::cout << std::setw(5) << get(i, j) << ", ";
+        }
+        std::cout << "\n";
+    }
+}
+
 
 ///////////////// TESTS /////////////////
 
 TEST(matrix_eq, {
     auto m1 = Matrix::zero(120, 312);
 
-    for (usize indx = 0; indx < m1.count(); indx++) {
+    for (u64 indx = 0; indx < m1.count(); indx++) {
         float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
         m1.set(indx, r);
     }
@@ -197,13 +268,44 @@ TEST(matrix_mul, {
 TEST(matrix_ident, {
     auto ident = Matrix::ident(5, 5);
 
-    for (usize x = 0; x < ident.width; x++) {
-        for (usize y = 0; y < ident.width; y++) {
+    for (u64 x = 0; x < ident.width; x++) {
+        for (u64 y = 0; y < ident.width; y++) {
 
             if (x == y) test_assert(cmp_scalar(1.f, ident.get(x, y)));
             else        test_assert(cmp_scalar(0.f, ident.get(x, y)));
         }
     }
+
+    return {};
+})
+
+TEST(matrix_solve, {
+
+
+    auto a = Matrix::zero(3, 3);
+    auto b = Matrix::zero(3, 1);
+
+    a.set(0, 0,  4);
+    a.set(1, 0, -4);
+    a.set(2, 0,  8);
+
+    a.set(0, 1,  8);
+    a.set(1, 1,  4);
+    a.set(2, 1, -4);
+
+    a.set(0, 2,  12);
+    a.set(1, 2,  -8);
+    a.set(2, 2, -12);
+
+    b.set(0, 20);
+    b.set(1, 4);
+    b.set(2, -40);
+
+
+    Matrix::solve(&a, &b);
+
+    b.print();
+
 
     return {};
 })

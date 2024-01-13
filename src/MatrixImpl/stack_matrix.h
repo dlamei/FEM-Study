@@ -15,9 +15,17 @@ namespace stack_matrix {
             scalar, scalar, scalar
         );
 
+        static bool eq(const Matrix3x3 &m1, const Matrix3x3 &m2,
+                       scalar eps = SCALAR_EPS);
+
         scalar get(index_t x, index_t y) const;
         void set(index_t x, index_t y, scalar s);
         void mul(scalar s);
+
+        scalar det();
+        void inverse_inplace();
+
+        void print();
     };
 
     struct Matrix3x2 {

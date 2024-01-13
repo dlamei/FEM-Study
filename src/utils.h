@@ -1,5 +1,6 @@
 #pragma once
 
+
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -7,6 +8,8 @@
 #include <string>
 #include <sstream>
 #include <optional>
+
+#include "benchmark.h"
 
 #include <cstddef>
 #include <stdint.h>
@@ -35,6 +38,7 @@ static_assert(sizeof(u32) == 4);
 static_assert(sizeof(f32) == 4);
 static_assert(sizeof(u64) == 8);
 static_assert(sizeof(f64) == 8);
+
 
 typedef f32 scalar;
 
@@ -210,3 +214,4 @@ if (__test_result) return __test_result; \
 #else
 #define TEST(test_name, test_body)
 #endif
+

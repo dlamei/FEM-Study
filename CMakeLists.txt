@@ -7,9 +7,15 @@ add_subdirectory(libs/eigen)
 
 set(SOURCES
 	src/utils.h
+    src/benchmark.h
 	src/Geometries/geometry.h 
 	src/Geometries/geometry.cpp
     src/FEM.h src/FEM.cpp
+
+    src/MatrixImpl/stack_matrix.h
+    src/MatrixImpl/stack_matrix.cpp
+    src/MatrixImpl/naive_matrix.h
+    src/MatrixImpl/naive_matrix.cpp
 	)
 
 
