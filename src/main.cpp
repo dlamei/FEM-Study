@@ -12,7 +12,7 @@ scalar source_fn(const Vector<2> &x) {
 
 int main() {
 
-    auto mesh = Mesh::load("../meshes/first_mesh_n5.msh");
+    auto mesh = Mesh::load("../meshes/first_mesh_n100.msh");
     auto res = solve_fem(mesh, &source_fn);
 
     return 0;

@@ -8,6 +8,8 @@
 scalar triangle_area(const Triangle &t);
 Triangle tri_from_indx(const Mesh &mesh, usize indx);
 
+void write_sparse_to_file(const SparseMatrix &m, const char *name);
+
 /*
  *  l1, l2, l3 on triangle K => barycentric coords functions
  *                                                           
@@ -109,6 +111,8 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
 
     SparseMatrix galerkin(n_verts, n_verts);
     galerkin.setFromTriplets(triplets.begin(), triplets.end());
+
+    write_sparse_to_file(galerkin, "galerkin_mat.txt");
 
     return galerkin;
 }
@@ -221,3 +225,11 @@ Mesh Mesh::load(const std::string &file_name) {
     return mesh;
 
 };
+
+void write_sparse_to_file(const SparseMatrix &m, const char *name) {
+    std::ofstream file(name); 
+    if (file.is_open())
+    {
+        file << m << std::endl;
+    }
+}
