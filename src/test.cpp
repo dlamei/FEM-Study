@@ -1,6 +1,4 @@
 #include "utils.h"
-#include <thread>
-#include <csignal>
 
 void passed(const char *test_name) {
     std::cout << "[";

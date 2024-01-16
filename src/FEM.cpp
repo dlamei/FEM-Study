@@ -2,6 +2,32 @@
 #include <fstream>
 #include <iostream>
 
+const int Dynamic = Eigen::Dynamic;
+
+template <const int rows, const int cols>
+using Matrix = Eigen::Matrix<scalar, rows, cols>;
+
+template <const int rows>
+using Vector = Eigen::Matrix<scalar, rows, 1>;
+
+typedef Matrix<2, 3> Triangle;
+typedef Eigen::SparseMatrix<scalar> SparseMatrix;
+
+struct Mesh {
+
+    usize n_nodes { 0 };
+    usize n_triangles { 0 };
+    usize n_boundary_edges { 0 };
+
+    //TODO: Samuel add boundary cond.
+
+    // 2 scalar per node
+    Matrix<Dynamic, 2> nodes {};
+
+    // 3 vert_indx's per triangle
+    Eigen::Matrix<index_t , Eigen::Dynamic, 3> triangles{};
+
+};
 
 
 
@@ -85,7 +111,7 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
 
     for (u32 i = 0; i < n_cells; i++) {
 
-        Eigen::Vector3i tri_indices = mesh.triangles.row(i);
+        Eigen::Vector<index_t, 3> tri_indices = mesh.triangles.row(i);
 
         Triangle tri = tri_from_indx(mesh, i);
         Matrix<3, 3> elem_mat = local_elem_mat(tri);
@@ -95,9 +121,9 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
         //for j in  0..3
         //    for k in 0..3
 
-        i32 indx_0 = tri_indices(0);
-        i32 indx_1 = tri_indices(1);
-        i32 indx_2 = tri_indices(2);
+        index_t indx_0 = tri_indices(0);
+        index_t indx_1 = tri_indices(1);
+        index_t indx_2 = tri_indices(2);
 
         triplets.push_back({ indx_0, indx_0, elem_mat(0, 0) });
         triplets.push_back({ indx_1, indx_0, elem_mat(1, 0) });
@@ -122,14 +148,14 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
 
 
 
-Vector<Dim::Dynamic> assemble_load_vec(const Mesh &mesh, source_fn_ptr source_fn) {
+Vector<Dynamic> assemble_load_vec(const Mesh &mesh, source_fn_ptr source_fn) {
     usize n_nodes = mesh.n_nodes;
     usize n_tris = mesh.n_triangles;
 
-    Vector<Dim::Dynamic> phi = Vector<Dim::Dynamic>::Zero(n_nodes);
+    Vector<Dynamic> phi = Vector<Dynamic>::Zero(n_nodes);
 
     for (usize i = 0; i < n_tris; i++) {
-        Eigen::Vector3i tri_indices = mesh.triangles.row(i);
+        Eigen::Vector<index_t, 3> tri_indices = mesh.triangles.row(i);
         Triangle tri = tri_from_indx(mesh, i);
 
         Vector<3> local_phi = local_load_vec(tri, source_fn);
@@ -142,17 +168,45 @@ Vector<Dim::Dynamic> assemble_load_vec(const Mesh &mesh, source_fn_ptr source_fn
     return phi;
 }
 
+Mesh geometry_to_mesh(const Geometry &geo) {
+
+    auto nodes = Matrix<Dynamic, 2>::Zero(geo.nof_vertices, 2).eval();
+    auto triangles = Eigen::Matrix<index_t, Dynamic, 3>::Zero(geo.nof_triangles, 3).eval();
+
+    for (index_t i = 0; i < geo.vertices.size(); i++) {
+        const auto &vert = geo.vertices.at(i);
+        nodes(i, 0) = vert.at(0);
+        nodes(i, 1) = vert.at(1);
+    }
+
+    for (index_t i = 0; i < geo.triangles.size(); i++) {
+        const auto &tri = geo.triangles.at(i);
+        triangles(i, 0) = tri.at(0);
+        triangles(i, 1) = tri.at(1);
+        triangles(i, 2) = tri.at(2);
+    }
+
+    return Mesh {
+        .n_nodes = geo.nof_vertices,
+        .n_triangles = geo.nof_triangles,
+        .n_boundary_edges = geo.nof_boundry_edges,
+        .nodes = nodes,
+        .triangles = triangles,
+    };
+}
+
 //* SOLVING *//
 
-Vector<Dim::Dynamic> solve_fem(const Mesh &mesh, source_fn_ptr source_fn) {
+Vector<Dynamic> solve_fem(const Geometry &geo, source_fn_ptr source_fn) {
+    auto mesh = geometry_to_mesh(geo);
 
     SparseMatrix a = assemble_galerkin_mat(mesh);
-    Vector<Dim::Dynamic> phi = assemble_load_vec(mesh, source_fn);
+    Vector<Dynamic> phi = assemble_load_vec(mesh, source_fn);
 
     Eigen::SparseLU<SparseMatrix, Eigen::COLAMDOrdering<int>> solver;
     solver.analyzePattern(a);
     solver.factorize(a);
-    Vector<Dim::Dynamic> mu = solver.solve(phi);
+    Vector<Dynamic> mu = solver.solve(phi);
 
     return mu;
 }
@@ -168,7 +222,7 @@ inline scalar triangle_area(const Triangle &t) {
 
 
 inline Triangle tri_from_indx(const Mesh &mesh, usize indx) {
-    Eigen::Vector3i tri_indices = mesh.triangles.row(indx);
+    Eigen::Vector<index_t, 3> tri_indices = mesh.triangles.row(indx);
 
     Matrix<3, 2> vert_coords;
     vert_coords << mesh.nodes.row(tri_indices[0]),
@@ -178,58 +232,6 @@ inline Triangle tri_from_indx(const Mesh &mesh, usize indx) {
     return vert_coords.transpose();
 }
 
-
-Mesh Mesh::load(const std::string &file_name) {
-
-    std::fstream input;
-    input.open(file_name);
-
-    assert(input.is_open(), "Failed to open mesh file");
-
-    usize n_verts = 0;
-    usize n_tris = 0;
-    usize n_boundry_edges = 0;
-    input >> n_verts;
-    input >> n_tris;
-    input >> n_boundry_edges;
-    assert((n_verts >= 0 && n_tris >= 0 && n_boundry_edges >= 0),
-            "Error nof_vertices, nof_triangles or nof_boundry_edges is an invalid input");
-
-    auto nodes = Eigen::Matrix<scalar, Dim::Dynamic, 2>(n_verts, 2);
-    for (usize i = 0; i < n_verts; i++) {
-        scalar x{}, y{};
-        u64 boundary_label;
-        input >> x;
-        input >> y;
-        input >> boundary_label;
-        nodes(i, 0) = x;
-        nodes(i, 1) = y;
-    }
-
-    auto tris = Eigen::Matrix<int, Dim::Dynamic, 3>(n_tris, 3);
-    for(int i = 0; i < n_tris; ++i) {
-        u64 l, m, n;
-        u64 boundry_label;
-        input >> l;
-        input >> m;
-        input >> n;
-        input >> boundry_label;
-        tris(i, 0) = l - 1;
-        tris(i, 1) = m - 1;
-        tris(i, 2) = n - 1;
-    }
-
-
-    Mesh mesh {
-        .n_nodes = n_verts,
-            .n_triangles = n_tris,
-            .nodes = nodes,
-            .triangles = tris,
-    };
-
-    return mesh;
-
-};
 
 void write_sparse_to_file(const SparseMatrix &m, const char *name) {
     PROFILE_FUNC()

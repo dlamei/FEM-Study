@@ -1,9 +1,7 @@
 #include "geometry.h"
 
-using namespace Geometry;
-
-Mesh Mesh::parse_mesh(std::string file_name) {
-    Mesh mesh{};
+Geometry Geometry::parse_mesh(std::string file_name) {
+    Geometry mesh{};
 
     std::fstream input;
     input.open(file_name);
@@ -20,7 +18,7 @@ Mesh Mesh::parse_mesh(std::string file_name) {
     // read in vertice coordinates
     for(int i = 0; i < mesh.nof_vertices; ++i) {
         scalar x, y;
-        u64 boundry_label;
+        index_t boundry_label;
         input >> x;
         input >> y;
         input >> boundry_label;
@@ -28,8 +26,8 @@ Mesh Mesh::parse_mesh(std::string file_name) {
     }
     // read in the triangles
     for(int i = 0; i < mesh.nof_triangles; ++i) {
-        u64 l, m, n;
-        u64 boundry_label;
+        index_t l, m, n;
+        index_t boundry_label;
         input >> l;
         input >> m;
         input >> n;
@@ -39,8 +37,8 @@ Mesh Mesh::parse_mesh(std::string file_name) {
     // read in the boundries
     mesh.boundries.push_back( {} );
     for(int i = 0; i < mesh.nof_boundry_edges; ++i) {
-        u64 m, n;
-        u64 boundry_label;
+        index_t m, n;
+        index_t boundry_label;
         input >> m;
         input >> n;
         input >> boundry_label;
@@ -53,27 +51,21 @@ Mesh Mesh::parse_mesh(std::string file_name) {
     }
 
     // Print message
-    std::cout << "Finished parsing Mesh from " + file_name + "\n";
+    std::cout << "Finished parsing Geometry from " + file_name + "\n";
     std::cout << "Vertices: " << mesh.nof_vertices << "   ";
     std::cout << "Triangles: " << mesh.nof_triangles << "   ";
     std::cout << "Boundry: " << mesh.nof_boundry_edges << '\n';
     return mesh;
 }
 
-matrix_t Mesh::get_tria_coords(int i) {
-    matrix_t tria_coords;
-    tria_coords.push_back(vertices.at(triangles.at(i).at(0)));
-    tria_coords.push_back(vertices.at(triangles.at(i).at(1)));
-    tria_coords.push_back(vertices.at(triangles.at(i).at(2)));
-    return tria_coords;
-}
+void Geometry::save_mesh_3D(const std::string& filename, const scalar *result, usize count) const {
+    assert(count == nof_vertices, "sanity check");
 
-void Mesh::save_mesh_3D(std::string filename, const std::vector<scalar> &z) const {
     std::ofstream output(filename);
     assert(output.is_open(),
             "Failed to open the mesh file");
     output << "# vtk DataFile Version 3.0\n";
-    output << "2D PDE Solution on Triangulated Mesh\n";
+    output << "2D PDE Solution on Triangulated Geometry\n";
     output << "ASCII\n";
     output << "DATASET UNSTRUCTURED_GRID\n";
     output << "POINTS " << nof_vertices << " float\n";
@@ -96,7 +88,7 @@ void Mesh::save_mesh_3D(std::string filename, const std::vector<scalar> &z) cons
     output << "SCALARS solution_field float 1\n";
     output << "LOOKUP_TABLE default\n";
     for (int i = 0; i < nof_vertices; ++i) {
-        output << z.at(i) << '\n';
+        output << result[i] << '\n';
     }
     // Print message
     std::cout << "Finished saving Solution to " + filename << '\n';

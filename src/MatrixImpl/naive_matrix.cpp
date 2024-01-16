@@ -99,59 +99,7 @@ Matrix Matrix::mul(const Matrix &a, const Matrix &b) {
 
 
 void Matrix::solve(Matrix *a, Matrix *b) {
-    assert(a->width == a->height);
-    assert(a->width == b->width);
-
-    u64 K = a->width;
-
-    scalar *A = a->data;
-    scalar *B = b->data;
-
-    for (u64 j = 0; j < K; j++) {
-        scalar max_val = std::abs(A[K * j + j]);
-
-        u64 max_row = j;
-
-        for (u64 i = j + 1; i < K; i++) {
-
-            scalar abs = A[K * j + i];
-            if (abs > max_val) {
-                max_val = abs;
-                max_row = i;
-            }
-        }
-
-        for (u64 l = 0; l < K; l++) {
-            scalar temp = A[K * l + max_row];
-            A[K * l + max_row] = A[K * l + j];
-            A[K * l + j] = temp;
-        }
-
-        scalar temp = B[max_row];
-        B[max_row] = B[j];
-        B[j] = temp;
-
-
-        for (u64 i = j; i < K - 1; i++) {
-            scalar c = -A[K * j + (i + 1)] / A[K * j + j];
-
-            for (u64 l = j + 1; l < K; l++) {
-                A[K * l + (i + 1)] += c * A[K * l + j];
-            }
-
-            B[i + 1] += c * B[j];
-        }
-    }
-
-    for (u64 j = K - 1; j > 0; j--) {
-        for (u64 i = j - 1; i >= 0; i--) {
-            B[i] -= B[j] * A[K * j + i] / A[K * j + j];
-        }
-    }
-
-    for (u64 j = 0; j < K; j++) {
-        B[j] *= 1.f / A[K * j + j];
-    }
+ // TODO: implement
 }
 
 

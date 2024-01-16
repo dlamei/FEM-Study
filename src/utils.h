@@ -26,6 +26,7 @@ typedef ptrdiff_t isize;
 typedef float     f32;
 typedef double    f64;
 
+
 static_assert(sizeof(u8) == sizeof(i8));
 static_assert(sizeof(u16) == sizeof(i16));
 static_assert(sizeof(u32) == sizeof(i32));
@@ -41,6 +42,7 @@ static_assert(sizeof(f64) == 8);
 
 
 typedef f32 scalar;
+typedef i32 index_t;
 
 #define SCALAR_EPS std::numeric_limits<scalar>::epsilon()
 
