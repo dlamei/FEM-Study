@@ -192,7 +192,7 @@ Mesh Mesh::load(const std::string &file_name) {
     input >> n_verts;
     input >> n_tris;
     input >> n_boundry_edges;
-    assert((n_verts >= 0 && n_tris >= 0 && n_boundry_edges >= 0), 
+    assert((n_verts >= 0 && n_tris >= 0 && n_boundry_edges >= 0),
             "Error nof_vertices, nof_triangles or nof_boundry_edges is an invalid input");
 
     auto nodes = Eigen::Matrix<scalar, Dim::Dynamic, 2>(n_verts, 2);
@@ -234,7 +234,7 @@ Mesh Mesh::load(const std::string &file_name) {
 void write_sparse_to_file(const SparseMatrix &m, const char *name) {
     PROFILE_FUNC()
 
-    std::ofstream file(name); 
+    std::ofstream file(name);
     if (file.is_open())
     {
         file << m << std::endl;
