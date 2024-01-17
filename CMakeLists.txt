@@ -28,7 +28,11 @@ target_compile_definitions(FEM_TEST PRIVATE COMPILE_TESTS)
 find_package(Threads)
 target_link_libraries(FEM_TEST ${CMAKE_THREAD_LIBS_INIT} eigen)
 
-
+# profiling
+add_executable(FEM_PROFILE ${SOURCES} src/main.cpp)
+target_link_libraries(FEM_PROFILE eigen)
+target_compile_options(FEM_PROFILE PRIVATE -pg)
+target_link_options(FEM_PROFILE PRIVATE -pg)
 
 # custom targets 
 add_custom_target(r DEPENDS run)
