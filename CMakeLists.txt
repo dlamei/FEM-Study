@@ -44,3 +44,11 @@ add_custom_target(test
 	DEPENDS FEM_TEST
 	WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 	)
+
+add_custom_target(p DEPENDS profile)
+add_custom_target(profile
+	COMMAND echo "running profiling..." && echo "" && ./FEM_PROFILE
+	COMMAND ../scripts/run_profiling.sh
+	DEPENDS FEM_PROFILE
+	WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+	)
