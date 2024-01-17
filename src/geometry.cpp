@@ -1,7 +1,7 @@
 #include "geometry.h"
 
-Geometry Geometry::parse_mesh(std::string file_name) {
-    Geometry mesh{};
+Mesh Mesh::parse_mesh(std::string file_name) {
+    Mesh mesh{};
 
     std::fstream input;
     input.open(file_name);
@@ -9,14 +9,14 @@ Geometry Geometry::parse_mesh(std::string file_name) {
             "Failed to open the mesh file");
 
     // read in number of vertices, triangeles and edge vertices
-    input >> mesh.nof_vertices;
-    input >> mesh.nof_triangles;
-    input >> mesh.nof_boundry_edges;
-    assert((mesh.nof_vertices >= 0 && mesh.nof_triangles >= 0 && mesh.nof_boundry_edges >= 0), 
-            "Error nof_vertices, nof_triangles or nof_boundry_edges is an invalid input");
+    input >> mesh.n_nodes;
+    input >> mesh.n_triangles;
+    input >> mesh.n_boundry_nodes;
+    assert((mesh.n_nodes >= 0 && mesh.n_triangles >= 0 && mesh.n_boundry_nodes >= 0), 
+            "Error n_nodes, n_triangles or n_boundry_nodes is an invalid input");
 
     // read in vertice coordinates
-    for(int i = 0; i < mesh.nof_vertices; ++i) {
+    for(int i = 0; i < mesh.n_nodes; ++i) {
         scalar x, y;
         index_t boundry_label;
         input >> x;
@@ -25,7 +25,7 @@ Geometry Geometry::parse_mesh(std::string file_name) {
         mesh.vertices.push_back({x,y});
     }
     // read in the triangles
-    for(int i = 0; i < mesh.nof_triangles; ++i) {
+    for(int i = 0; i < mesh.n_triangles; ++i) {
         index_t l, m, n;
         index_t boundry_label;
         input >> l;
@@ -35,31 +35,35 @@ Geometry Geometry::parse_mesh(std::string file_name) {
         mesh.triangles.push_back({l - 1, m - 1, n - 1});
     }
     // read in the boundries
-    mesh.boundries.push_back( {} );
-    for(int i = 0; i < mesh.nof_boundry_edges; ++i) {
+    for(int i = 0; i < mesh.n_boundry_nodes; ++i) {
         index_t m, n;
         index_t boundry_label;
         input >> m;
         input >> n;
         input >> boundry_label;
-        mesh.boundries.at(0).push_back( {m - 1, n - 1} );
-        while( boundry_label >= mesh.boundries.size() ) {
-            mesh.boundries.push_back( {} );
-        }
-        mesh.boundries.at(boundry_label).push_back( {m - 1, n - 1} );
+        switch( boundry_label ) {
+            case 1: 
+                mesh.outer_boundries.push_back( m - 1 );
+                break;
+            case 2:
+                mesh.inner_boundries.push_back( m - 1 );
+                break;
+            default:
+                assert(false, "Error, too many different boundries, change switch statement in parse_mesh");
 
+        }
     }
 
     // Print message
     std::cout << "Finished parsing Geometry from " + file_name + "\n";
-    std::cout << "Vertices: " << mesh.nof_vertices << "   ";
-    std::cout << "Triangles: " << mesh.nof_triangles << "   ";
-    std::cout << "Boundry: " << mesh.nof_boundry_edges << '\n';
+    std::cout << "Vertices: " << mesh.n_nodes << "   ";
+    std::cout << "Triangles: " << mesh.n_triangles << "   ";
+    std::cout << "Boundry: " << mesh.n_boundry_nodes << '\n';
     return mesh;
 }
 
-void Geometry::save_mesh_3D(const std::string& filename, const scalar *result, usize count) const {
-    assert(count == nof_vertices, "sanity check");
+void Mesh::save_mesh_3D(const std::string& filename, const scalar *result, usize count) const {
+    assert(count == n_nodes, "sanity check");
 
     std::ofstream output(filename);
     assert(output.is_open(),
@@ -68,31 +72,31 @@ void Geometry::save_mesh_3D(const std::string& filename, const scalar *result, u
     output << "2D PDE Solution on Triangulated Geometry\n";
     output << "ASCII\n";
     output << "DATASET UNSTRUCTURED_GRID\n";
-    output << "POINTS " << nof_vertices << " float\n";
+    output << "POINTS " << n_nodes << " float\n";
 
-    for (int i = 0; i < nof_vertices; ++i) {
-        output << vertices.at(i).at(0) << ' ' << vertices.at(i).at(1) << ' ' << "0" << '\n';
+    for (int i = 0; i < n_nodes; ++i) {
+        output << vertices.at(i).x << ' ' << vertices.at(i).y << ' ' << "0" << '\n';
     }
     output << '\n';
-    output << "CELLS " << nof_triangles << " " << nof_triangles * 4 << "\n";
-    for (int i = 0; i < nof_triangles; ++i) {
-        output << "3 " << triangles.at(i).at(0) << " " << triangles.at(i).at(1) << " " << triangles.at(i).at(2) << '\n'; 
+    output << "CELLS " << n_triangles << " " << n_triangles * 4 << "\n";
+    for (int i = 0; i < n_triangles; ++i) {
+        output << "3 " << triangles.at(i).a << " " << triangles.at(i).b << " " << triangles.at(i).c << '\n'; 
     }
     output << '\n';
-    output << "CELL_TYPES " << nof_triangles << '\n';
-    for (int i = 0; i < nof_triangles; ++i) {
+    output << "CELL_TYPES " << n_triangles << '\n';
+    for (int i = 0; i < n_triangles; ++i) {
         output << "5\n";
     }
     output << '\n';
-    output << "POINT_DATA " << nof_vertices << '\n';
+    output << "POINT_DATA " << n_nodes << '\n';
     output << "SCALARS solution_field float 1\n";
     output << "LOOKUP_TABLE default\n";
-    for (int i = 0; i < nof_vertices; ++i) {
+    for (int i = 0; i < n_nodes; ++i) {
         output << result[i] << '\n';
     }
     // Print message
     std::cout << "Finished saving Solution to " + filename << '\n';
-    std::cout << "Vertices: " << nof_vertices << "   ";
-    std::cout << "Triangles: " << nof_triangles << "   ";
-    std::cout << "Boundry: " << nof_boundry_edges << '\n';
+    std::cout << "Vertices: " << n_nodes << "   ";
+    std::cout << "Triangles: " << n_triangles << "   ";
+    std::cout << "Boundry: " << n_boundry_nodes << '\n';
 }

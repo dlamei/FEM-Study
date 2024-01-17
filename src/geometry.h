@@ -6,27 +6,39 @@
 #include <fstream>
 
 //* generic way to parse and store mesh files *//
+struct Coords {
+    scalar x{ 0 };
+    scalar y{ 0 } ;
+};
+struct Tria {
+    index_t a{ 0 };
+    index_t b{ 0 };
+    index_t c{ 0 };
+};
 
-struct Geometry {
-    usize nof_vertices{ 0 };
-    usize nof_triangles{ 0 };
-    usize nof_boundry_edges{ 0 };
+struct Mesh {
+    usize n_nodes{ 0 };
+    usize n_triangles{ 0 };
+    usize n_boundry_nodes{ 0 };
 
     // Matrix containing x and y coordinates of vertices
     // dimension: nof_vertices * 2
-    std::vector<std::vector<scalar>> vertices;
+    std::vector<Coords> vertices;
 
     // Matrix containing indecies of the vertices of the triangles
     // dimension: nof_triangles * 3
-    std::vector<std::vector<index_t>> triangles;
+    std::vector<Tria> triangles;
     
-    // Vector containing the vertices which are part of the different boundries
-    // boundries.at(0) contains the verticies of all boundries
-    // dimension: (nof_different_boundries + 1) * nof_specific boundries * 2
-    std::vector<std::vector<std::vector<index_t>>> boundries;
+    // Vector containing the vertices which are part of the inner boundry
+    // dimension: nof_inner_boundry_nodes * 1
+    std::vector<index_t> inner_boundries;
+
+    // Vector containing the vertices which are part of the outer boundry
+    // dimension: nof_outer_boundry_nodes * 1
+    std::vector<index_t> outer_boundries;
 
     // parses a .msh file into a Mesh object and returns it
-    static Geometry parse_mesh(std::string file_name);
+    static Mesh parse_mesh(std::string file_name);
 
     // creates a .vtk file of the solution
     // takes as input a pointer to the resulting vector, count is the # of elements in result

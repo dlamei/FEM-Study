@@ -13,24 +13,6 @@ using Vector = Eigen::Matrix<scalar, rows, 1>;
 typedef Matrix<2, 3> Triangle;
 typedef Eigen::SparseMatrix<scalar> SparseMatrix;
 
-struct Mesh {
-
-    usize n_nodes { 0 };
-    usize n_triangles { 0 };
-    usize n_boundary_edges { 0 };
-
-    //TODO: Samuel add boundary cond.
-
-    // 2 scalar per node
-    Matrix<Dynamic, 2> nodes {};
-
-    // 3 vert_indx's per triangle
-    Eigen::Matrix<index_t , Eigen::Dynamic, 3> triangles{};
-
-};
-
-
-
 scalar triangle_area(const Triangle &t);
 Triangle tri_from_indx(const Mesh &mesh, usize indx);
 
@@ -111,7 +93,7 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
 
     for (u32 i = 0; i < n_cells; i++) {
 
-        Eigen::Vector<index_t, 3> tri_indices = mesh.triangles.row(i);
+        auto tri_indices = mesh.triangles.at(i);
 
         Triangle tri = tri_from_indx(mesh, i);
         Matrix<3, 3> elem_mat = local_elem_mat(tri);
@@ -121,9 +103,9 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
         //for j in  0..3
         //    for k in 0..3
 
-        index_t indx_0 = tri_indices(0);
-        index_t indx_1 = tri_indices(1);
-        index_t indx_2 = tri_indices(2);
+        index_t indx_0 = tri_indices.a;
+        index_t indx_1 = tri_indices.b;
+        index_t indx_2 = tri_indices.c;
 
         triplets.push_back({ indx_0, indx_0, elem_mat(0, 0) });
         triplets.push_back({ indx_1, indx_0, elem_mat(1, 0) });
@@ -136,6 +118,27 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
         triplets.push_back({ indx_0, indx_2, elem_mat(0, 2) });
         triplets.push_back({ indx_1, indx_2, elem_mat(1, 2) });
         triplets.push_back({ indx_2, indx_2, elem_mat(2, 2) });
+    }
+
+    // Boundry conditions
+    std::set<int> rowsToRemove;
+    for(auto row : mesh.inner_boundries) {
+        rowsToRemove.insert(row);
+    }
+    for(auto row : mesh.outer_boundries) {
+        rowsToRemove.insert(row);
+    }
+
+    triplets.erase(std::remove_if(triplets.begin(), triplets.end(), 
+        [&rowsToRemove](const Eigen::Triplet<scalar> &t) {
+            return rowsToRemove.find(t.row()) != rowsToRemove.end();
+        }), triplets.end());
+
+    for(auto row : mesh.inner_boundries) {
+        triplets.push_back(Eigen::Triplet<scalar>(row, row, 1.0));
+    }
+    for(auto row : mesh.outer_boundries) {
+        triplets.push_back(Eigen::Triplet<scalar>(row, row, 1.0));
     }
 
     SparseMatrix galerkin(n_verts, n_verts);
@@ -155,51 +158,30 @@ Vector<Dynamic> assemble_load_vec(const Mesh &mesh, source_fn_ptr source_fn) {
     Vector<Dynamic> phi = Vector<Dynamic>::Zero(n_nodes);
 
     for (usize i = 0; i < n_tris; i++) {
-        Eigen::Vector<index_t, 3> tri_indices = mesh.triangles.row(i);
+        auto tri_indices = mesh.triangles.at(i);
         Triangle tri = tri_from_indx(mesh, i);
 
         Vector<3> local_phi = local_load_vec(tri, source_fn);
 
-        phi(tri_indices(0)) += local_phi(0);
-        phi(tri_indices(1)) += local_phi(1);
-        phi(tri_indices(1)) += local_phi(2);
+        phi(tri_indices.a) += local_phi(0);
+        phi(tri_indices.b) += local_phi(1);
+        phi(tri_indices.c) += local_phi(2);
+    }
+
+    // Boundry Conditions
+    for(auto outer_boundry_node : mesh.outer_boundries) {
+        phi(outer_boundry_node) = 0.0   ;
+    }
+    for(auto inner_boundry_node : mesh.inner_boundries) {
+        phi(inner_boundry_node) = 1.0;
     }
 
     return phi;
 }
 
-Mesh geometry_to_mesh(const Geometry &geo) {
-
-    auto nodes = Matrix<Dynamic, 2>::Zero(geo.nof_vertices, 2).eval();
-    auto triangles = Eigen::Matrix<index_t, Dynamic, 3>::Zero(geo.nof_triangles, 3).eval();
-
-    for (index_t i = 0; i < geo.vertices.size(); i++) {
-        const auto &vert = geo.vertices.at(i);
-        nodes(i, 0) = vert.at(0);
-        nodes(i, 1) = vert.at(1);
-    }
-
-    for (index_t i = 0; i < geo.triangles.size(); i++) {
-        const auto &tri = geo.triangles.at(i);
-        triangles(i, 0) = tri.at(0);
-        triangles(i, 1) = tri.at(1);
-        triangles(i, 2) = tri.at(2);
-    }
-
-    return Mesh {
-        .n_nodes = geo.nof_vertices,
-        .n_triangles = geo.nof_triangles,
-        .n_boundary_edges = geo.nof_boundry_edges,
-        .nodes = nodes,
-        .triangles = triangles,
-    };
-}
-
 //* SOLVING *//
 
-Vector<Dynamic> solve_fem(const Geometry &geo, source_fn_ptr source_fn) {
-    auto mesh = geometry_to_mesh(geo);
-
+Vector<Dynamic> solve_fem(const Mesh &mesh, source_fn_ptr source_fn) {
     SparseMatrix a = assemble_galerkin_mat(mesh);
     Vector<Dynamic> phi = assemble_load_vec(mesh, source_fn);
 
@@ -222,12 +204,14 @@ inline scalar triangle_area(const Triangle &t) {
 
 
 inline Triangle tri_from_indx(const Mesh &mesh, usize indx) {
-    Eigen::Vector<index_t, 3> tri_indices = mesh.triangles.row(indx);
-
+    auto tri_indices = mesh.triangles.at(indx);
     Matrix<3, 2> vert_coords;
-    vert_coords << mesh.nodes.row(tri_indices[0]),
-                mesh.nodes.row(tri_indices[1]),
-                mesh.nodes.row(tri_indices[2]);
+    vert_coords << mesh.vertices.at(tri_indices.a).x,
+                   mesh.vertices.at(tri_indices.b).x,
+                   mesh.vertices.at(tri_indices.c).x,
+                   mesh.vertices.at(tri_indices.a).y,
+                   mesh.vertices.at(tri_indices.b).y,
+                   mesh.vertices.at(tri_indices.c).y;
 
     return vert_coords.transpose();
 }
