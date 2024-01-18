@@ -1,15 +1,16 @@
-#include "FEM.h"
+#include "FEM_naive.h"
 #include <fstream>
 #include <iostream>
 
-template <const int rows, const int cols>
-using Matrix = Eigen::Matrix<scalar, rows, cols>;
 
-template <const int rows>
-using Vector = Eigen::Matrix<scalar, rows, 1>;
+using Matrix = naive_matrix::Matrix;
 
-typedef Matrix<2, 3> Triangle;
-typedef Eigen::SparseMatrix<scalar> SparseMatrix;
+using Vector = naive_matrix::Matrix;
+
+typedef stack_matrix::Vector3 Vector3;
+typedef stack_matrix::Matrix3x3 Matrix3x3;
+typedef stack_matrix::Matrix2x3 Triangle;
+typedef naive_matrix::Matrix SparseMatrix;
 
 scalar triangle_area(const Triangle &t);
 Triangle tri_from_indx(const Mesh &mesh, usize indx);
@@ -30,10 +31,17 @@ void write_sparse_to_file(const SparseMatrix &m, const char *name);
  */
 
 Triangle grad_bary_coords(const Triangle &tri) {
-    Matrix<3, 3> grad;
-    grad.block<3, 1>(0, 0) = Matrix<3, 1>::Ones();
-    grad.block<3, 2>(0, 1) = tri.transpose();
-    return grad.inverse().block<2, 3>(1, 0);
+    auto grad3x3 = stack_matrix::Matrix3x3::init(
+                                    1, tri.get(0,0), tri.get(0,1),
+                                    1, tri.get(1,0), tri.get(1,1),
+                                    1, tri.get(2,0), tri.get(2,1)
+                                    );
+    grad3x3.inverse_inplace();
+    auto grad2x3 = stack_matrix::Matrix2x3::init( // could be way better if we can convert a 3x3 matrix to a 2x3 matrix by cutting
+                                    grad3x3.get(1,0), grad3x3.get(1,1), grad3x3.get(1,2),
+                                    grad3x3.get(2,0), grad3x3.get(2,1), grad3x3.get(2,2)
+                                    );
+    return grad2x3;
 }
 
 
@@ -48,24 +56,21 @@ Triangle grad_bary_coords(const Triangle &tri) {
  *
  */
 
-Matrix<3, 3> local_elem_mat(const Triangle &tri) {
+Matrix3x3 local_elem_mat(const Triangle &tri) {
     PROFILE_FUNC()
 
     scalar area = triangle_area(tri);
     auto grad = grad_bary_coords(tri);
-    return area * grad.transpose() * grad;
+    auto grad_t = grad.transpose();
+    auto grad3x3 = stack_matrix::mat3x2_mul_mat2x3(grad_t, grad);
+    grad3x3.mul(area);
+    
+    return grad3x3;
 }
 
 
-inline Vector<3> local_load_vec(const Triangle &tri, source_fn_ptr source_fn) {
-    scalar area = triangle_area(tri);
-
-    Vector<3> local_phi;
-    local_phi(0) = source_fn(tri.col(0));
-    local_phi(1) = source_fn(tri.col(1));
-    local_phi(2) = source_fn(tri.col(2));
-
-    local_phi *= area / 3.0;
+Vector3 local_load_vec(const Triangle &tri) {
+    Vector3 local_phi{0,0,0};
     return local_phi;
 }
 
@@ -87,14 +92,14 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
     usize n_cells = mesh.n_triangles;
 
     // TODO: #nnz estimation for resizing triplets vector
-    std::vector<Eigen::Triplet<scalar>> triplets;
+    SparseMatrix gal_matrix = naive_matrix::Matrix::zero(n_cells, n_cells);
 
     for (u32 i = 0; i < n_cells; i++) {
 
         auto tri_indices = mesh.triangles.at(i);
 
         Triangle tri = tri_from_indx(mesh, i);
-        Matrix<3, 3> elem_mat = local_elem_mat(tri);
+        Matrix3x3 elem_mat = local_elem_mat(tri);
 
         // loop unrolled of
         //
@@ -105,17 +110,15 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
         index_t indx_1 = tri_indices.b;
         index_t indx_2 = tri_indices.c;
 
-        triplets.push_back({ indx_0, indx_0, elem_mat(0, 0) });
-        triplets.push_back({ indx_1, indx_0, elem_mat(1, 0) });
-        triplets.push_back({ indx_2, indx_0, elem_mat(2, 0) });
-
-        triplets.push_back({ indx_0, indx_1, elem_mat(0, 1) });
-        triplets.push_back({ indx_1, indx_1, elem_mat(1, 1) });
-        triplets.push_back({ indx_2, indx_1, elem_mat(2, 1) });
-
-        triplets.push_back({ indx_0, indx_2, elem_mat(0, 2) });
-        triplets.push_back({ indx_1, indx_2, elem_mat(1, 2) });
-        triplets.push_back({ indx_2, indx_2, elem_mat(2, 2) });
+        gal_matrix.set( indx_0, indx_0, elem_mat.get(0, 0) );
+        gal_matrix.set( indx_1, indx_0, elem_mat.get(1, 0) );
+        gal_matrix.set( indx_2, indx_0, elem_mat.get(2, 0) );
+        gal_matrix.set( indx_0, indx_1, elem_mat.get(0, 1) );
+        gal_matrix.set( indx_1, indx_1, elem_mat.get(1, 1) );
+        gal_matrix.set( indx_2, indx_1, elem_mat.get(2, 1) );
+        gal_matrix.set( indx_0, indx_2, elem_mat.get(0, 2) );
+        gal_matrix.set( indx_1, indx_2, elem_mat.get(1, 2) );
+        gal_matrix.set( indx_2, indx_2, elem_mat.get(2, 2) );
     }
 
     // Boundry conditions
@@ -179,7 +182,7 @@ Vector<Dynamic> assemble_load_vec(const Mesh &mesh, source_fn_ptr source_fn) {
 
 //* SOLVING *//
 
-Vector<Dynamic> solve_fem(const Mesh &mesh, source_fn_ptr source_fn) {
+naive_matrix::Matrix solve_fem(const Mesh &mesh) {
     SparseMatrix a = assemble_galerkin_mat(mesh);
     Vector<Dynamic> phi = assemble_load_vec(mesh, source_fn);
 
@@ -194,10 +197,9 @@ Vector<Dynamic> solve_fem(const Mesh &mesh, source_fn_ptr source_fn) {
 
 
 // mesh utility functions
-
 inline scalar triangle_area(const Triangle &t) {
-    return 0.5 * std::abs((t(0, 1) - t(0, 0)) * (t(1, 2) - t(1, 1)) -
-            (t(0, 2) - t(0, 1)) * (t(1, 1) - t(1, 0)));
+    return 0.5 * std::abs((t.get(0, 1) - t.get(0, 0)) * (t.get(1, 2) - t.get(1, 1)) -
+            (t.get(0, 2) - t.get(0, 1)) * (t.get(1, 1) - t.get(1, 0)));
 }
 
 
