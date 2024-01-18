@@ -2,6 +2,15 @@
 #include <fstream>
 #include <iostream>
 
+<<<<<<< HEAD
+=======
+#include <Eigen/SparseLU>
+#include <Eigen/SparseQR>
+#include <Eigen/SparseCholesky>
+
+const int Dynamic = Eigen::Dynamic;
+
+>>>>>>> dd51fae7950216d7f32412bed14d89e51a50e7f5
 template <const int rows, const int cols>
 using Matrix = Eigen::Matrix<scalar, rows, cols>;
 
@@ -9,7 +18,7 @@ template <const int rows>
 using Vector = Eigen::Matrix<scalar, rows, 1>;
 
 typedef Matrix<2, 3> Triangle;
-typedef Eigen::SparseMatrix<scalar> SparseMatrix;
+typedef Eigen::SparseMatrix<scalar, Eigen::RowMajor> SparseMatrix;
 
 scalar triangle_area(const Triangle &t);
 Triangle tri_from_indx(const Mesh &mesh, usize indx);
@@ -105,6 +114,7 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
         index_t indx_1 = tri_indices.b;
         index_t indx_2 = tri_indices.c;
 
+//TODO: transpose?
         triplets.push_back({ indx_0, indx_0, elem_mat(0, 0) });
         triplets.push_back({ indx_1, indx_0, elem_mat(1, 0) });
         triplets.push_back({ indx_2, indx_0, elem_mat(2, 0) });
@@ -142,7 +152,7 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
     SparseMatrix galerkin(n_verts, n_verts);
     galerkin.setFromTriplets(triplets.begin(), triplets.end());
 
-    /* write_sparse_to_file(galerkin, "galerkin_mat.txt"); */
+    galerkin.makeCompressed();
 
     return galerkin;
 }
@@ -183,10 +193,24 @@ Vector<Dynamic> solve_fem(const Mesh &mesh, source_fn_ptr source_fn) {
     SparseMatrix a = assemble_galerkin_mat(mesh);
     Vector<Dynamic> phi = assemble_load_vec(mesh, source_fn);
 
-    Eigen::SparseLU<SparseMatrix, Eigen::COLAMDOrdering<int>> solver;
+    Eigen::SparseLU<SparseMatrix, Eigen::NaturalOrdering<i32>> solver;
+
     solver.analyzePattern(a);
     solver.factorize(a);
+
+    if (solver.info() != Eigen::ComputationInfo::Success) {
+        printf("solve: ComputationInfo %d", solver.info());
+        exit(-1);
+    }
+    
     Vector<Dynamic> mu = solver.solve(phi);
+
+
+    /* write_sparse_to_file(a, "m.txt"); */
+    /* write_sparse_to_file(solver.matrixL().toSparse(), "l.txt"); */
+    /* write_sparse_to_file(solver.matrixU().toSparse(), "u.txt"); */
+
+    
 
     return mu;
 }
@@ -216,11 +240,12 @@ inline Triangle tri_from_indx(const Mesh &mesh, usize indx) {
 
 
 void write_sparse_to_file(const SparseMatrix &m, const char *name) {
-    PROFILE_FUNC()
-
-    std::ofstream file(name);
-    if (file.is_open())
-    {
-        file << m << std::endl;
+        std::ofstream file(name);
+    
+    file << m.rows() << " " << m.cols() << "\n";
+    for (int k = 0; k < m.outerSize(); ++k) {
+        for (SparseMatrix::InnerIterator it(m, k); it; ++it) {
+            file << it.col() << " " << it.row() << " " << it.value() << "\n";
+        }
     }
 }

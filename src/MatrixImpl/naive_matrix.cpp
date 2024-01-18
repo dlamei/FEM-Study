@@ -328,9 +328,11 @@ TEST(LDLT_solve, {
 
     Matrix::LDLT_solve(&a, &b);
 
-    b.print();
+    test_assert(cmp_scalar(b.get(0), 455.f / 12));
+    test_assert(cmp_scalar(b.get(1), -31.f / 3));
+    test_assert(cmp_scalar(b.get(2), 5.f / 3));
 
-    return{};
+    return {};
 
 })
 
