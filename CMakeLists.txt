@@ -34,6 +34,12 @@ target_link_libraries(FEM_PROFILE eigen)
 target_compile_options(FEM_PROFILE PRIVATE -pg)
 target_link_options(FEM_PROFILE PRIVATE -pg)
 
+# benchmark
+add_executable(FEM_BENCH ${SOURCES} src/main.cpp)
+target_link_libraries(FEM_BENCH eigen)
+target_compile_definitions(FEM_BENCH PRIVATE PROFILING=1)
+
+
 # custom targets 
 add_custom_target(r DEPENDS run)
 add_custom_target(run
@@ -54,5 +60,12 @@ add_custom_target(profile
 	COMMAND echo "running profiling..." && echo "" && ./FEM_PROFILE
 	COMMAND ../scripts/run_profiling.sh
 	DEPENDS FEM_PROFILE
+	WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+	)
+
+add_custom_target(bench DEPENDS benchmark)
+add_custom_target(benchmark
+    COMMAND echo "running benchmark..." && echo "" && ./FEM_BENCH
+    DEPENDS FEM_BENCH
 	WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 	)
