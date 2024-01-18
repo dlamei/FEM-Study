@@ -2,15 +2,13 @@
 #include <fstream>
 #include <iostream>
 
-<<<<<<< HEAD
-=======
+
 #include <Eigen/SparseLU>
 #include <Eigen/SparseQR>
 #include <Eigen/SparseCholesky>
 
 const int Dynamic = Eigen::Dynamic;
 
->>>>>>> dd51fae7950216d7f32412bed14d89e51a50e7f5
 template <const int rows, const int cols>
 using Matrix = Eigen::Matrix<scalar, rows, cols>;
 
