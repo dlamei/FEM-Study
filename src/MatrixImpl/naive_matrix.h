@@ -39,6 +39,18 @@ namespace naive_matrix {
         // matrix multiplication
         static Matrix mul(const Matrix &a, const Matrix &b);
 
+        // Precondition: L is lower triangular n*n and b is a n*1 matrix;
+        static Matrix forward_substitution(const Matrix &L, const Matrix &b);
+
+        // Precondition: U is upper triangular n*n and b is a n*1 matrix;
+        static Matrix backward_substitution(const Matrix &U, const Matrix &b);
+
+        // Precondition: A is a LDL decompose Matrix n*n and b is 1*n
+        static void inplace_LDL_decomposition(Matrix *a);
+
+        // Precondition: A is a LDL decompose Matrix n*n and b is 1*n
+        static void LDLT_solve(Matrix *a, Matrix *b);
+
         static void solve(Matrix *a, Matrix *b);
 
         static bool eq(const Matrix &a, const Matrix &b, float eps = SCALAR_EPS);

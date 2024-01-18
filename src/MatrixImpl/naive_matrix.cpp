@@ -97,6 +97,81 @@ Matrix Matrix::mul(const Matrix &a, const Matrix &b) {
     return res;
 }
 
+Matrix Matrix::forward_substitution(const Matrix &L, const Matrix &b) {
+    int n = b.count();
+    Matrix sol = Matrix::zero(1,n);
+
+    add_assign(&sol, b);
+
+    for(int i = 0; i < n;  i++) {
+        for(int j = 0; j < i; j++) {
+            sol.set(i, sol.get(i) - L.get(i,j) * sol.get(j));
+        }
+        sol.set(i, sol.get(i) / L.get(i,i));
+    }
+
+    return sol;
+}
+
+
+Matrix Matrix::backward_substitution(const Matrix &L, const Matrix &b) {
+    int n = b.count();
+    Matrix sol = Matrix::zero(1,n);
+
+    add_assign(&sol, b);
+
+    for(int i = n - 1;  i >= 0;  i--) {
+        for(int j = i + 1; j < n; j++) {
+            sol.set(i, sol.get(i) - L.get(i,j) * sol.get(j));
+        }
+        sol.set(i, sol.get(i) / L.get(i,i));
+    }
+
+    return sol;
+}
+
+void Matrix::LDLT_solve(Matrix *a, Matrix *b){
+    int n = b->count();
+
+    // inplace LDL^T decomposition
+    for(int i = 0; i < n; i++) {
+        for (int j = 0; j <= i; j++) {
+            scalar sum = a->get(i,j);
+
+            for(int k = 0; k < j; k++) {
+                sum -= a->get(i,k) * a->get(j,k) * a->get(k,k);
+            }
+
+            if(j == i) {
+                a->set(i, i, sum);
+            } else {
+                a->set(i, j, (sum / a->get(j,j)));
+                a->set(j, i, (sum / a->get(j,j)));
+            }
+        }
+    }
+
+    // Ly = b
+    // b -> y
+    for(int i = 0; i < n;  i++) {
+        for(int j = 0; j < i; j++) {
+            b->set(i, b->get(i) - a->get(i,j) * b->get(j));
+        }
+    }
+    // Dz = y
+    // b -> z
+    for(int i = 0; i < n; i++) {
+        b->set(i,b->get(i) / a->get(i,i));
+    }
+    // L^Tx = z
+    // b -> x
+    for(int i = n - 1;  i >= 0;  i--) {
+        for(int j = i + 1; j < n; j++) {
+            b->set(i, b->get(i) - a->get(i,j) * b->get(j));
+        }
+    }
+    
+}
 
 void Matrix::solve(Matrix *a, Matrix *b) {
  // TODO: implement
@@ -161,9 +236,9 @@ inline void Matrix::destroy(Matrix *m) {
 }
 
 void Matrix::print() {
-    for (u64 i = 0; i < width; i++) {
+    for (u64 i = 0; i < height; i++) {
         for (u64 j = 0; j < width; j++) {
-            std::cout << std::setw(5) << get(i, j) << ", ";
+            std::cout << std::setw(5) << get(j, i) << ", ";
         }
         std::cout << "\n";
     }
@@ -227,33 +302,35 @@ TEST(matrix_ident, {
     return {};
 })
 
-TEST(matrix_solve, {
-
-
+//   4   12 -16    x     1
+//   12  37 -43  * y  =  1 
+//  -16 -43  98    z     1
+TEST(LDLT_solve, {
+    
     auto a = Matrix::zero(3, 3);
-    auto b = Matrix::zero(3, 1);
+    auto b = Matrix::zero(1, 3);
 
     a.set(0, 0,  4);
-    a.set(1, 0, -4);
-    a.set(2, 0,  8);
+    a.set(1, 0,  12);
+    a.set(2, 0, -16);
 
-    a.set(0, 1,  8);
-    a.set(1, 1,  4);
-    a.set(2, 1, -4);
+    a.set(0, 1,  12);
+    a.set(1, 1,  37);
+    a.set(2, 1, -43);
 
-    a.set(0, 2,  12);
-    a.set(1, 2,  -8);
-    a.set(2, 2, -12);
+    a.set(0, 2, -16);
+    a.set(1, 2, -43);
+    a.set(2, 2,  98);
 
-    b.set(0, 20);
-    b.set(1, 4);
-    b.set(2, -40);
+    b.set(0, 1);
+    b.set(1, 1);
+    b.set(2, 1);
 
-
-    Matrix::solve(&a, &b);
+    Matrix::LDLT_solve(&a, &b);
 
     b.print();
 
+    return{};
 
-    return {};
 })
+
