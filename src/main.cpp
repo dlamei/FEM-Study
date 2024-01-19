@@ -11,10 +11,13 @@ int main() {
     std::string file_name = "10n_1h";
     std::string folder_name = "1h_linear_series/";
 
+    // mesh
     auto mesh = Mesh::parse_mesh("../meshes/" + folder_name + file_name + ".msh");
-    auto res = solve_fem(mesh, &source_fn);
 
-    /* mesh.save_mesh_3D(file_name + ".vtk", res.data(), res.rows()); */
+    // Eigen FEM
+    auto res = solve_fem(mesh, &source_fn);
+    mesh.save_mesh_3D(file_name + ".vtk", res.data(), res.rows()); 
+
 
 #if PROFILING
     benchmark::global_timer::write_to_file("benchmark.json");
