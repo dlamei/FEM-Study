@@ -8,6 +8,7 @@ using Vector = naive_matrix::Matrix;
 
 typedef stack_matrix::Vector3 Vec3;
 typedef stack_matrix::Matrix3x3 Mat3x3;
+typedef stack_matrix::Matrix3x2 Mat3x2;
 typedef stack_matrix::Matrix2x3 Triangle;
 typedef naive_matrix::Matrix SparseMatrix;
 
@@ -36,13 +37,13 @@ void write_sparse_to_file(const SparseMatrix &m, const char *name);
  */
 
 Triangle grad_bary_coords(const Triangle &tri) {
-    auto grad3x3 = Mat3x3::init(
-                                    1, tri.get(0,0), tri.get(0,1),
-                                    1, tri.get(1,0), tri.get(1,1),
-                                    1, tri.get(2,0), tri.get(2,1)
+    Mat3x3 grad3x3 = Mat3x3::init(
+                                    1, tri.get(0,0), tri.get(1,0),
+                                    1, tri.get(0,1), tri.get(1,1),
+                                    1, tri.get(0,2), tri.get(1,2)
                                     );
     grad3x3.inverse_inplace();
-    auto grad2x3 = Triangle::init( // could be way better if we can convert a 3x3 matrix to a 2x3 matrix by cutting
+    Triangle grad2x3 = Triangle::init( // could be way better if we can convert a 3x3 matrix to a 2x3 matrix by cutting
                                     grad3x3.get(1,0), grad3x3.get(1,1), grad3x3.get(1,2),
                                     grad3x3.get(2,0), grad3x3.get(2,1), grad3x3.get(2,2)
                                     );
@@ -64,10 +65,11 @@ Triangle grad_bary_coords(const Triangle &tri) {
 Mat3x3 local_elem_mat(const Triangle &tri) {
     PROFILE_FUNC()
 
+
     scalar area = triangle_area(tri);
-    auto grad = grad_bary_coords(tri);
-    auto grad_t = grad.transpose();
-    auto grad3x3 = stack_matrix::mat3x2_mul_mat2x3(grad_t, grad);
+    Triangle grad = grad_bary_coords(tri);
+    Mat3x2 grad_t = grad.transpose();
+    Mat3x3 grad3x3 = stack_matrix::mat3x2_mul_mat2x3(grad_t, grad);
     grad3x3.mul(area);
     
     return grad3x3;
@@ -90,7 +92,7 @@ Vec3 local_load_vec(const Triangle &tri) {
  *
  */
 
-SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
+std::vector<Triplet> assemble_galerkin_mat(const Mesh &mesh) {
     PROFILE_FUNC()
 
     usize n_verts = mesh.n_nodes;
@@ -101,7 +103,7 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
 
     for (u32 i = 0; i < n_cells; i++) {
 
-        auto tri_indices = mesh.triangles.at(i);
+        Tria tri_indices = mesh.triangles.at(i);
 
         Triangle tri = tri_from_indx(mesh, i);
         Mat3x3 elem_mat = local_elem_mat(tri);
@@ -110,6 +112,18 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
         //
         //for j in  0..3
         //    for k in 0..3
+
+        if(i == 0) {
+            std::cout << "Tri Incices: \n";
+            std::cout << tri_indices.a << " " << tri_indices.b << " " << tri_indices.c << "\n";
+            std::cout << "Triangle: \n";
+            tri.print();
+            std::cout << "\n";
+            std::cout << "\nGrad Bary Coords: \n";
+            grad_bary_coords(tri).print();
+            std::cout << "\nElement Matrix: \n";
+            elem_mat.print();
+        }
 
         index_t indx_0 = tri_indices.a;
         index_t indx_1 = tri_indices.b;
@@ -124,37 +138,11 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
         triplets.push_back( { indx_0, indx_2, elem_mat.get(0, 2) } );
         triplets.push_back( { indx_1, indx_2, elem_mat.get(1, 2) } );
         triplets.push_back( { indx_2, indx_2, elem_mat.get(2, 2) } );
-    }
-
-    // Boundry conditions
-    std::set<int> rowsToRemove;
-    for(auto row : mesh.inner_boundries) {
-        rowsToRemove.insert(row);
-    }
-    for(auto row : mesh.outer_boundries) {
-        rowsToRemove.insert(row);
-    }
-
-    triplets.erase(std::remove_if(triplets.begin(), triplets.end(), 
-        [&rowsToRemove](const Triplet &t) {
-            return rowsToRemove.find(t.row) != rowsToRemove.end();
-        }), triplets.end());
-
-    for(auto row : mesh.inner_boundries) {
-        triplets.push_back({row, row, 1.0});
-    }
-    for(auto row : mesh.outer_boundries) {
-        triplets.push_back({row, row, 1.0});
-    }
-
-    SparseMatrix galerkin = naive_matrix::Matrix::zero(n_verts, n_verts);
-    for(auto t : triplets) {
-        galerkin.set(t.row, t.col, galerkin.get(t.row, t.col) + t.val);
-    }
-
+    }    
+    
     /* write_sparse_to_file(galerkin, "galerkin_mat.txt"); */
 
-    return galerkin;
+    return triplets;
 }
 
 
@@ -166,7 +154,7 @@ Vector assemble_load_vec(const Mesh &mesh) {
     Vector phi = Vector::zero(1, n_nodes);
 
     for (usize i = 0; i < n_tris; i++) {
-        auto tri_indices = mesh.triangles.at(i);
+        Tria tri_indices = mesh.triangles.at(i);
         Triangle tri = tri_from_indx(mesh, i);
 
         Vec3 local_phi = local_load_vec(tri);
@@ -176,24 +164,83 @@ Vector assemble_load_vec(const Mesh &mesh) {
         phi.set(tri_indices.c, phi.get(tri_indices.c) +  local_phi.z);
     }
 
-    // Boundry Conditions
-    for(auto outer_boundry_node : mesh.outer_boundries) {
-        phi.set(outer_boundry_node, 0.0);
-    }
-    for(auto inner_boundry_node : mesh.inner_boundries) {
-        phi.set(inner_boundry_node, 1.0);
-    }
-
     return phi;
 }
 
 //* SOLVING *//
+bool isSymmetric(const SparseMatrix &matrix, double& unsymmetryMeasure) {
+    int size = matrix.height;
+    unsymmetryMeasure = 0;
+    
+    for (int i = 0; i < size; ++i) {
+        for (int j = i; j < size; ++j) { // Check only half the matrix (above the diagonal)
+            if (matrix.get(i,j) != matrix.get(j,i)) {
+                unsymmetryMeasure += abs(matrix.get(i,j) - matrix.get(j,i));
+            }
+        }
+    }
+    
+    return unsymmetryMeasure == 0;
+}
+
+void apply_boundry_conditions(const Mesh &mesh, std::vector<Triplet> *A_triplets, Vector *phi){
+
+    std::set<int> boundry_nodes;
+    std::set<int> inner_boundry_nodes;
+    std::set<int> outer_boundry_nodes;
+    for(auto row : mesh.inner_boundries) { 
+        boundry_nodes.insert(row); 
+        inner_boundry_nodes.insert(row);
+    }
+    for(auto row : mesh.outer_boundries) { 
+        boundry_nodes.insert(row); 
+    }
+
+    // RHS Vector
+    for(auto outer_boundry_node : mesh.outer_boundries) {
+        phi->set(outer_boundry_node, 0.0);
+    }
+    for(auto inner_boundry_node : mesh.inner_boundries) {
+        phi->set(inner_boundry_node, 1.0);
+    }
+
+    for(auto t : *A_triplets) {
+        if(inner_boundry_nodes.find(t.col) != inner_boundry_nodes.end() && 
+            boundry_nodes.find(t.row) == boundry_nodes.end()) {
+                phi->set(t.row, phi->get(t.row) - t.val);
+        }
+    }
+
+    // Galerkin Matrix
+    A_triplets->erase(std::remove_if(A_triplets->begin(), A_triplets->end(), 
+        [&boundry_nodes](const Triplet &t) {
+            return (boundry_nodes.find(t.row) != boundry_nodes.end()) ||
+                    (boundry_nodes.find(t.col) != boundry_nodes.end());
+        }), A_triplets->end());
+
+    for(auto row : mesh.inner_boundries) { A_triplets->push_back({row, row, 1.0}); }
+    for(auto row : mesh.outer_boundries) { A_triplets->push_back({row, row, 1.0}); }    
+
+}
 
 naive_matrix::Matrix solve_fem(const Mesh &mesh) {
-    SparseMatrix a = assemble_galerkin_mat(mesh);
+
+    std::vector<Triplet> A_triplets = assemble_galerkin_mat(mesh);
     Vector phi = assemble_load_vec(mesh);
 
-    naive_matrix::Matrix::LDLT_solve(&a, &phi);
+    apply_boundry_conditions(mesh, &A_triplets, &phi);
+
+    index_t n_verts = mesh.n_nodes;
+    SparseMatrix A = naive_matrix::Matrix::zero(n_verts, n_verts);
+    for(auto t : A_triplets) {
+        A.set(t.col, t.row, A.get(t.col, t.row) + t.val);
+    }
+
+    double unsymetry;
+    isSymmetric(A, unsymetry);
+    std::cout << "UnsymetryMessure: " << unsymetry << "\n";
+
+    naive_matrix::Matrix::LDLT_solve(&A, &phi);
 
     return phi;
 }
@@ -203,7 +250,7 @@ naive_matrix::Matrix solve_fem(const Mesh &mesh) {
 // mesh utility functions
 inline scalar triangle_area(const Triangle &t) {
     return 0.5 * std::abs((t.get(0, 1) - t.get(0, 0)) * (t.get(1, 2) - t.get(1, 1)) -
-            (t.get(0, 2) - t.get(0, 1)) * (t.get(1, 1) - t.get(1, 0)));
+                          (t.get(0, 2) - t.get(0, 1)) * (t.get(1, 1) - t.get(1, 0)));
 }
 
 
@@ -211,11 +258,11 @@ inline Triangle tri_from_indx(const Mesh &mesh, usize indx) {
     Tria tri_indices = mesh.triangles.at(indx);
     Triangle vert_coords;
     vert_coords.set(0, 0, mesh.vertices.at(tri_indices.a).x);
-    vert_coords.set(1, 0, mesh.vertices.at(tri_indices.b).x);
-    vert_coords.set(2, 0, mesh.vertices.at(tri_indices.c).x);
-    vert_coords.set(0, 1, mesh.vertices.at(tri_indices.a).y);
+    vert_coords.set(0, 1, mesh.vertices.at(tri_indices.b).x);
+    vert_coords.set(0, 2, mesh.vertices.at(tri_indices.c).x);
+    vert_coords.set(1, 0, mesh.vertices.at(tri_indices.a).y);
     vert_coords.set(1, 1, mesh.vertices.at(tri_indices.b).y);
-    vert_coords.set(2, 1, mesh.vertices.at(tri_indices.c).y);
+    vert_coords.set(1, 2, mesh.vertices.at(tri_indices.c).y);
 
     return vert_coords;
 }

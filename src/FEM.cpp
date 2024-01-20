@@ -44,7 +44,6 @@ Triangle grad_bary_coords(const Triangle &tri) {
     return grad.inverse().block<2, 3>(1, 0);
 }
 
-
 //* LOCAL COMPUTATIONS *//
 
 /*
@@ -64,7 +63,6 @@ Matrix<3, 3> local_elem_mat(const Triangle &tri) {
     return area * grad.transpose() * grad;
 }
 
-
 inline Vector<3> local_load_vec(const Triangle &tri, source_fn_ptr source_fn) {
     scalar area = triangle_area(tri);
 
@@ -79,8 +77,6 @@ inline Vector<3> local_load_vec(const Triangle &tri, source_fn_ptr source_fn) {
 
 
 //* ASSEMBLING *//
-
-
 /*
  * assemble galerkin matrix 
  *
@@ -88,7 +84,7 @@ inline Vector<3> local_load_vec(const Triangle &tri, source_fn_ptr source_fn) {
  *
  */
 
-SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
+std::vector<Eigen::Triplet<scalar>> assemble_galerkin_mat(const Mesh &mesh) {
     PROFILE_FUNC()
 
     usize n_verts = mesh.n_nodes;
@@ -104,7 +100,7 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
         Triangle tri = tri_from_indx(mesh, i);
         Matrix<3, 3> elem_mat = local_elem_mat(tri);
 
-        // loop unrolled of
+        // loop unrolled of 
         //
         //for j in  0..3
         //    for k in 0..3
@@ -113,7 +109,6 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
         index_t indx_1 = tri_indices.b;
         index_t indx_2 = tri_indices.c;
 
-//TODO: transpose?
         triplets.push_back({ indx_0, indx_0, elem_mat(0, 0) });
         triplets.push_back({ indx_1, indx_0, elem_mat(1, 0) });
         triplets.push_back({ indx_2, indx_0, elem_mat(2, 0) });
@@ -127,36 +122,8 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
         triplets.push_back({ indx_2, indx_2, elem_mat(2, 2) });
     }
 
-    // Boundry conditions
-    std::set<int> rowsToRemove;
-    for(auto row : mesh.inner_boundries) {
-        rowsToRemove.insert(row);
-    }
-    for(auto row : mesh.outer_boundries) {
-        rowsToRemove.insert(row);
-    }
-
-    triplets.erase(std::remove_if(triplets.begin(), triplets.end(), 
-        [&rowsToRemove](const Eigen::Triplet<scalar> &t) {
-            return rowsToRemove.find(t.row()) != rowsToRemove.end();
-        }), triplets.end());
-
-    for(auto row : mesh.inner_boundries) {
-        triplets.push_back(Eigen::Triplet<scalar>(row, row, 1.0));
-    }
-    for(auto row : mesh.outer_boundries) {
-        triplets.push_back(Eigen::Triplet<scalar>(row, row, 1.0));
-    }
-
-    SparseMatrix galerkin(n_verts, n_verts);
-    galerkin.setFromTriplets(triplets.begin(), triplets.end());
-
-    galerkin.makeCompressed();
-
-    return galerkin;
+    return triplets;
 }
-
-
 
 Vector<Dynamic> assemble_load_vec(const Mesh &mesh, source_fn_ptr source_fn) {
     usize n_nodes = mesh.n_nodes;
@@ -177,7 +144,7 @@ Vector<Dynamic> assemble_load_vec(const Mesh &mesh, source_fn_ptr source_fn) {
 
     // Boundry Conditions
     for(auto outer_boundry_node : mesh.outer_boundries) {
-        phi(outer_boundry_node) = 0.0   ;
+        phi(outer_boundry_node) = 0.0;
     }
     for(auto inner_boundry_node : mesh.inner_boundries) {
         phi(inner_boundry_node) = 1.0;
@@ -186,16 +153,115 @@ Vector<Dynamic> assemble_load_vec(const Mesh &mesh, source_fn_ptr source_fn) {
     return phi;
 }
 
-//* SOLVING *//
 
+bool isSymmetric(const SparseMatrix &matrix, double& unsymmetryMeasure) {
+    if (matrix.rows() != matrix.cols()) {
+        std::cout << "The matrix is not square." << std::endl;
+        return false;
+    }
+
+    unsymmetryMeasure = 0.0;
+    int size = matrix.rows();
+
+    // Iterate over the non-zero elements of the sparse matrix
+    for (int k = 0; k < matrix.outerSize(); ++k) {
+        for (SparseMatrix::InnerIterator it(matrix, k); it; ++it) {
+            int i = it.row();
+            int j = it.col();
+            double value = it.value();
+
+            if (i != j) {
+                double symValue = matrix.coeff(j, i);
+                if (value != symValue) {
+                    unsymmetryMeasure += std::abs(value - symValue);
+                }
+            }
+        }
+    }
+    
+    return unsymmetryMeasure == 0;
+}
+
+void apply_boundry_conditions(const Mesh &mesh, std::vector<Eigen::Triplet<scalar>> *A_triplets, Vector<Dynamic> *phi){
+
+    std::set<int> boundry_nodes;
+    std::set<int> inner_boundry_nodes;
+    std::set<int> outer_boundry_nodes;
+    for(auto row : mesh.inner_boundries) { 
+        boundry_nodes.insert(row); 
+        inner_boundry_nodes.insert(row);
+    }
+    for(auto row : mesh.outer_boundries) { 
+        boundry_nodes.insert(row); 
+    }
+
+    // RHS Vector
+    for(auto outer_boundry_node : mesh.outer_boundries) {
+        (*phi)(outer_boundry_node) = 0.0;
+    }
+    for(auto inner_boundry_node : mesh.inner_boundries) {
+        (*phi)(inner_boundry_node) = 1.0;
+    }
+    for(auto t : *A_triplets) {
+        if(inner_boundry_nodes.find(t.col()) != inner_boundry_nodes.end() && 
+            boundry_nodes.find(t.row()) == boundry_nodes.end()) {
+                (*phi)(t.row()) -= t.value();
+        }
+    }
+
+    // Galerkin Matrix
+    A_triplets->erase(std::remove_if(A_triplets->begin(), A_triplets->end(), 
+        [&boundry_nodes](const Eigen::Triplet<scalar> &t) {
+            return (boundry_nodes.find(t.row()) != boundry_nodes.end()) ||
+                    (boundry_nodes.find(t.col()) != boundry_nodes.end());
+        }), A_triplets->end());
+
+    for(auto row : mesh.inner_boundries) {
+        A_triplets->push_back(Eigen::Triplet<scalar>(row, row, 1.0));
+    }
+    for(auto row : mesh.outer_boundries) {
+        A_triplets->push_back(Eigen::Triplet<scalar>(row, row, 1.0));
+    }
+}
+
+//* SOLVING *//
 Vector<Dynamic> solve_fem(const Mesh &mesh, source_fn_ptr source_fn) {
-    SparseMatrix a = assemble_galerkin_mat(mesh);
+    std::vector<Eigen::Triplet<scalar>> A_triplets = assemble_galerkin_mat(mesh);
     Vector<Dynamic> phi = assemble_load_vec(mesh, source_fn);
 
-    Eigen::SparseLU<SparseMatrix, Eigen::NaturalOrdering<i32>> solver;
+    /*
+    double unsymetry;
+    isSymmetric(a, unsymetry);
+    std::cout << "UnsymetryMessure: " << unsymetry << "\n";
+    */
 
-    solver.analyzePattern(a);
-    solver.factorize(a);
+    apply_boundry_conditions(mesh, &A_triplets, &phi);
+
+    index_t n_verts = mesh.n_nodes;
+    SparseMatrix A(n_verts, n_verts);
+    A.setFromTriplets(A_triplets.begin(), A_triplets.end());
+
+    //A.makeCompressed();
+
+    Eigen::SimplicialLDLT<SparseMatrix> solver;
+    solver.compute(A);
+
+    if(solver.info() != Eigen::Success) {
+        // Decomposition failed
+        std::cout << "Decomposition failed" << std::endl;
+    }
+
+    Vector<Dynamic> mu = solver.solve(phi);
+    
+    if(solver.info() != Eigen::Success) {
+        // Solving failed
+        std::cout << "Solving failed" << std::endl;
+    }
+    /*
+    Eigen::SimplicialLDLT<SparseMatrix, Eigen::NaturalOrdering<i32>> solver;
+
+    solver.analyzePattern(A);
+    solver.factorize(A);
 
     if (solver.info() != Eigen::ComputationInfo::Success) {
         printf("solve: ComputationInfo %d", solver.info());
@@ -203,30 +269,25 @@ Vector<Dynamic> solve_fem(const Mesh &mesh, source_fn_ptr source_fn) {
     }
     
     Vector<Dynamic> mu = solver.solve(phi);
+    */
 
 
     /* write_sparse_to_file(a, "m.txt"); */
     /* write_sparse_to_file(solver.matrixL().toSparse(), "l.txt"); */
     /* write_sparse_to_file(solver.matrixU().toSparse(), "u.txt"); */
 
-    
-
     return mu;
 }
 
-
-
 // mesh utility functions
-
 inline scalar triangle_area(const Triangle &t) {
     return 0.5 * std::abs((t(0, 1) - t(0, 0)) * (t(1, 2) - t(1, 1)) -
             (t(0, 2) - t(0, 1)) * (t(1, 1) - t(1, 0)));
 }
 
-
 inline Triangle tri_from_indx(const Mesh &mesh, usize indx) {
     auto tri_indices = mesh.triangles.at(indx);
-    Matrix<3, 2> vert_coords;
+    Matrix<2, 3> vert_coords;
     vert_coords << mesh.vertices.at(tri_indices.a).x,
                    mesh.vertices.at(tri_indices.b).x,
                    mesh.vertices.at(tri_indices.c).x,
@@ -234,9 +295,8 @@ inline Triangle tri_from_indx(const Mesh &mesh, usize indx) {
                    mesh.vertices.at(tri_indices.b).y,
                    mesh.vertices.at(tri_indices.c).y;
 
-    return vert_coords.transpose();
+    return vert_coords;
 }
-
 
 void write_sparse_to_file(const SparseMatrix &m, const char *name) {
         std::ofstream file(name);

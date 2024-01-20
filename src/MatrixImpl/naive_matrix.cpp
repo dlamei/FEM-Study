@@ -132,16 +132,13 @@ Matrix Matrix::backward_substitution(const Matrix &L, const Matrix &b) {
 
 void Matrix::LDLT_solve(Matrix *a, Matrix *b){
     int n = b->count();
-
     // inplace LDL^T decomposition
     for(int i = 0; i < n; i++) {
         for (int j = 0; j <= i; j++) {
             scalar sum = a->get(i,j);
-
             for(int k = 0; k < j; k++) {
                 sum -= a->get(i,k) * a->get(j,k) * a->get(k,k);
             }
-
             if(j == i) {
                 a->set(i, i, sum);
             } else {
@@ -150,7 +147,6 @@ void Matrix::LDLT_solve(Matrix *a, Matrix *b){
             }
         }
     }
-
     // Ly = b
     // b -> y
     for(int i = 0; i < n;  i++) {

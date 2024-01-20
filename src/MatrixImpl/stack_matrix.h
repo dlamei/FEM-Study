@@ -38,6 +38,8 @@ namespace stack_matrix {
 
         scalar get(index_t x, index_t y) const;
         void set(index_t x, index_t y, scalar s);
+
+        void print();
     };
 
     struct Matrix2x3 {
@@ -53,6 +55,8 @@ namespace stack_matrix {
         void set(index_t x, index_t y, scalar s);
 
         Matrix3x2 transpose() const;
+
+        void print();
     };
 
     struct Vector3 {

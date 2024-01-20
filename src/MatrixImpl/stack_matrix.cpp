@@ -4,7 +4,7 @@
 
 namespace stack_matrix {
 
-    inline Matrix3x3 Matrix3x3::init(
+    Matrix3x3 Matrix3x3::init(
             scalar s11, scalar s21, scalar s31,
             scalar s12, scalar s22, scalar s32,
             scalar s13, scalar s23, scalar s33)
@@ -18,7 +18,7 @@ namespace stack_matrix {
         };
     }
 
-    inline bool Matrix3x3::eq(const Matrix3x3 &m1, const Matrix3x3 &m2, scalar eps) {
+    bool Matrix3x3::eq(const Matrix3x3 &m1, const Matrix3x3 &m2, scalar eps) {
         for (u32 i = 0; i < 9; i++) {
             if (!cmp_scalar(m1.data[i], m2.data[i], eps)) return false;
         }
@@ -26,27 +26,27 @@ namespace stack_matrix {
         return true;
     }
 
-    inline scalar Matrix3x3::get(index_t x, index_t y) const {
+    scalar Matrix3x3::get(index_t x, index_t y) const {
         db_assert(x < 3);
         db_assert(y < 3);
-        return data[x + y * 3];
+        return data[x * 3 + y];
     }
 
-    inline void Matrix3x3::set(index_t x, index_t y, scalar s) {
+    void Matrix3x3::set(index_t x, index_t y, scalar s) {
         db_assert(x < 3);
         db_assert(y < 3);
-        data[x + y * 3] = s;
+        data[x * 3 + y] = s;
     }
 
-    inline void Matrix3x3::mul(scalar s) {
+    void Matrix3x3::mul(scalar s) {
         for (u32 i = 0; i < 9; i++) data[i] *= s;
     }
 
-    inline scalar det_2x2(scalar a11, scalar a21, scalar a12, scalar a22) {
+    scalar det_2x2(scalar a11, scalar a21, scalar a12, scalar a22) {
         return a11 * a22 -  a21 * a12;
     }
 
-    inline scalar Matrix3x3::det() {
+    scalar Matrix3x3::det() {
         scalar a = data[0], b = data[1], c = data[2],  
                d = data[3], e = data[4], f = data[5], 
                g = data[6], h = data[7], i = data[8];
@@ -72,14 +72,17 @@ namespace stack_matrix {
         data[8] =   (a*e - b*d) / det_m;
     };
 
-    inline Matrix3x2 Matrix3x2::init(
-            scalar s11, scalar s21, scalar s31,
-            scalar s12, scalar s22, scalar s32) 
+    Matrix3x2 Matrix3x2::init(
+            scalar s11, scalar s12, 
+            scalar s21, scalar s22, 
+            scalar s31, scalar s32
+            ) 
     {
         return Matrix3x2 {
             .data = {
-                s11, s21, s31,  
-                s12, s22, s32, 
+                s11, s12,
+                s21, s22, 
+                s31, s32 
             },
         };
     }
@@ -96,56 +99,79 @@ namespace stack_matrix {
         }
     }
 
-    inline scalar Matrix3x2::get(index_t x, index_t y) const {
+    scalar Matrix3x2::get(index_t x, index_t y) const {
         db_assert(x < 3);
         db_assert(y < 2);
-        return data[x + y * 3];
+        return data[x * 2 + y];
     }
 
-    inline void Matrix3x2::set(index_t x, index_t y, scalar s) {
+    void Matrix3x2::set(index_t x, index_t y, scalar s) {
         db_assert(x < 3);
         db_assert(y < 2);
         data[x + y * 3] = s;
     }
 
-    inline Matrix2x3 Matrix2x3::init(
-            scalar s11, scalar s21,
-            scalar s12, scalar s22,
-            scalar s13, scalar s23)
+    void Matrix3x2::print() {
+        for (u32 i = 0; i < 6; i++) {
+            std::cout << std::setw(5) << data[i];
+
+            if ((i + 1) % 2) {
+                std::cout << ", ";
+            } else {
+                std::cout << "\n";
+            }
+        }
+    }
+
+    Matrix2x3 Matrix2x3::init(
+            scalar s11, scalar s12, scalar s13, 
+            scalar s21, scalar s22, scalar s23
+            )
     {
         return Matrix2x3 {
             .data = {
-                s11, s21,
-                s12, s22,
-                s13, s23
+                s11, s12, s13,
+                s21, s22, s23
             },
         };
     }
 
-    inline scalar Matrix2x3::get(index_t x, index_t y) const {
+    scalar Matrix2x3::get(index_t x, index_t y) const {
         db_assert(x < 2);
         db_assert(y < 3);
-        return data[x + y * 2];
+        return data[x * 3 + y];
     }
 
-    inline void Matrix2x3::set(index_t x, index_t y, scalar s) {
+    void Matrix2x3::set(index_t x, index_t y, scalar s) {
         db_assert(x < 2);
         db_assert(y < 3);
-        data[x + y * 2] = s;
+        data[x * 3 + y] = s;
     }
 
-    inline Matrix3x2 Matrix2x3::transpose() const {
+    void Matrix2x3::print() {
+        for (u32 i = 0; i < 6; i++) {
+            std::cout << std::setw(5) << data[i];
+
+            if ((i + 1) % 3) {
+                std::cout << ", ";
+            } else {
+                std::cout << "\n";
+            }
+        }
+    }
+
+    Matrix3x2 Matrix2x3::transpose() const {
         return Matrix3x2::init(
-                get(0, 0), get(0, 1), get(0, 2),
-                get(1, 0), get(1, 2), get(1, 2)
+                get(0, 0), get(1, 0),
+                get(0, 1), get(1, 1),
+                get(0, 2), get(1, 2)
                 );
     }
 
-    inline scalar row_mul_col(const Matrix3x2 &m1, u32 row, const Matrix2x3 &m2, u32 col) {
+    scalar row_mul_col(const Matrix3x2 &m1, u32 row, const Matrix2x3 &m2, u32 col) {
         return 
-            m1.get(0, row) * m2.get(col, 0) +
-            m1.get(0, row) * m2.get(col, 0) +
-            m1.get(0, row) * m2.get(col, 0);
+            m1.get(row, 0) * m2.get(0, col) +
+            m1.get(row, 1) * m2.get(1, col);
     }
 
     Matrix3x3 mat3x2_mul_mat2x3(const Matrix3x2 &m1, const Matrix2x3 &m2) {
@@ -168,12 +194,33 @@ namespace stack_matrix {
                 );
     };
 
-    inline void Vector3::mul(scalar s) {
+    void Vector3::mul(scalar s) {
         x *= s;
         y *= s;
         z *= s;
     };
 
+
+    TEST(mat3x2_mul_mat2x3, {
+        Matrix3x2 mat3x2 = Matrix3x2::init(
+                                2, 3, 
+                                4, 1,
+                                2, 3
+                                );
+        mat3x2.print();
+        std::cout << "\n";
+        Matrix2x3 mat2x3 = Matrix2x3::init(
+                                4, 3, 2,
+                                5, 2, 1
+        );
+        mat2x3.print();
+        std::cout << "\n";
+        Matrix3x3 mat3x3 = mat3x2_mul_mat2x3(mat3x2, mat2x3);
+
+        mat3x3.print();
+
+        return {};
+    })
 
     TEST(det_matrix_3x3, {
         scalar det;

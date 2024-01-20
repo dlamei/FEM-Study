@@ -6,7 +6,7 @@
 
 int main() {
 
-    std::string file_name = "4n_1h";
+    std::string file_name = "32n_1h";
     std::string folder_name = "1h_exponential_series/";
 
     // mesh
@@ -14,7 +14,7 @@ int main() {
 
     // Eigen FEM
     auto res = solve_fem(mesh);
-    mesh.save_mesh_3D(file_name + ".vtk", res.data, res.height); 
+    mesh.save_mesh_3D(file_name + "_naive.vtk", res.data, res.height); 
 
 
 #if PROFILING
