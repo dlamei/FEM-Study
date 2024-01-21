@@ -2,18 +2,23 @@
 #include <fstream>
 #include <iostream>
 
-
 using Matrix = naive_matrix::Matrix;
 
 using Vector = naive_matrix::Matrix;
 
-typedef stack_matrix::Vector3 Vector3;
-typedef stack_matrix::Matrix3x3 Matrix3x3;
+typedef stack_matrix::Vector3 Vec3;
+typedef stack_matrix::Matrix3x3 Mat3x3;
 typedef stack_matrix::Matrix2x3 Triangle;
 typedef naive_matrix::Matrix SparseMatrix;
 
 scalar triangle_area(const Triangle &t);
 Triangle tri_from_indx(const Mesh &mesh, usize indx);
+
+struct Triplet{
+    index_t row;
+    index_t col;
+    scalar val;
+};
 
 void write_sparse_to_file(const SparseMatrix &m, const char *name);
 
@@ -31,13 +36,13 @@ void write_sparse_to_file(const SparseMatrix &m, const char *name);
  */
 
 Triangle grad_bary_coords(const Triangle &tri) {
-    auto grad3x3 = stack_matrix::Matrix3x3::init(
+    auto grad3x3 = Mat3x3::init(
                                     1, tri.get(0,0), tri.get(0,1),
                                     1, tri.get(1,0), tri.get(1,1),
                                     1, tri.get(2,0), tri.get(2,1)
                                     );
     grad3x3.inverse_inplace();
-    auto grad2x3 = stack_matrix::Matrix2x3::init( // could be way better if we can convert a 3x3 matrix to a 2x3 matrix by cutting
+    auto grad2x3 = Triangle::init( // could be way better if we can convert a 3x3 matrix to a 2x3 matrix by cutting
                                     grad3x3.get(1,0), grad3x3.get(1,1), grad3x3.get(1,2),
                                     grad3x3.get(2,0), grad3x3.get(2,1), grad3x3.get(2,2)
                                     );
@@ -56,7 +61,7 @@ Triangle grad_bary_coords(const Triangle &tri) {
  *
  */
 
-Matrix3x3 local_elem_mat(const Triangle &tri) {
+Mat3x3 local_elem_mat(const Triangle &tri) {
     PROFILE_FUNC()
 
     scalar area = triangle_area(tri);
@@ -69,8 +74,8 @@ Matrix3x3 local_elem_mat(const Triangle &tri) {
 }
 
 
-Vector3 local_load_vec(const Triangle &tri) {
-    Vector3 local_phi{0,0,0};
+Vec3 local_load_vec(const Triangle &tri) {
+    Vec3 local_phi{0,0,0};
     return local_phi;
 }
 
@@ -92,14 +97,14 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
     usize n_cells = mesh.n_triangles;
 
     // TODO: #nnz estimation for resizing triplets vector
-    SparseMatrix gal_matrix = naive_matrix::Matrix::zero(n_cells, n_cells);
+    std::vector<Triplet> triplets;
 
     for (u32 i = 0; i < n_cells; i++) {
 
         auto tri_indices = mesh.triangles.at(i);
 
         Triangle tri = tri_from_indx(mesh, i);
-        Matrix3x3 elem_mat = local_elem_mat(tri);
+        Mat3x3 elem_mat = local_elem_mat(tri);
 
         // loop unrolled of
         //
@@ -110,15 +115,15 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
         index_t indx_1 = tri_indices.b;
         index_t indx_2 = tri_indices.c;
 
-        gal_matrix.set( indx_0, indx_0, elem_mat.get(0, 0) );
-        gal_matrix.set( indx_1, indx_0, elem_mat.get(1, 0) );
-        gal_matrix.set( indx_2, indx_0, elem_mat.get(2, 0) );
-        gal_matrix.set( indx_0, indx_1, elem_mat.get(0, 1) );
-        gal_matrix.set( indx_1, indx_1, elem_mat.get(1, 1) );
-        gal_matrix.set( indx_2, indx_1, elem_mat.get(2, 1) );
-        gal_matrix.set( indx_0, indx_2, elem_mat.get(0, 2) );
-        gal_matrix.set( indx_1, indx_2, elem_mat.get(1, 2) );
-        gal_matrix.set( indx_2, indx_2, elem_mat.get(2, 2) );
+        triplets.push_back( { indx_0, indx_0, elem_mat.get(0, 0) } );
+        triplets.push_back( { indx_1, indx_0, elem_mat.get(1, 0) } );
+        triplets.push_back( { indx_2, indx_0, elem_mat.get(2, 0) } );
+        triplets.push_back( { indx_0, indx_1, elem_mat.get(0, 1) } );
+        triplets.push_back( { indx_1, indx_1, elem_mat.get(1, 1) } );
+        triplets.push_back( { indx_2, indx_1, elem_mat.get(2, 1) } );
+        triplets.push_back( { indx_0, indx_2, elem_mat.get(0, 2) } );
+        triplets.push_back( { indx_1, indx_2, elem_mat.get(1, 2) } );
+        triplets.push_back( { indx_2, indx_2, elem_mat.get(2, 2) } );
     }
 
     // Boundry conditions
@@ -131,19 +136,21 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
     }
 
     triplets.erase(std::remove_if(triplets.begin(), triplets.end(), 
-        [&rowsToRemove](const Eigen::Triplet<scalar> &t) {
-            return rowsToRemove.find(t.row()) != rowsToRemove.end();
+        [&rowsToRemove](const Triplet &t) {
+            return rowsToRemove.find(t.row) != rowsToRemove.end();
         }), triplets.end());
 
     for(auto row : mesh.inner_boundries) {
-        triplets.push_back(Eigen::Triplet<scalar>(row, row, 1.0));
+        triplets.push_back({row, row, 1.0});
     }
     for(auto row : mesh.outer_boundries) {
-        triplets.push_back(Eigen::Triplet<scalar>(row, row, 1.0));
+        triplets.push_back({row, row, 1.0});
     }
 
-    SparseMatrix galerkin(n_verts, n_verts);
-    galerkin.setFromTriplets(triplets.begin(), triplets.end());
+    SparseMatrix galerkin = naive_matrix::Matrix::zero(n_verts, n_verts);
+    for(auto t : triplets) {
+        galerkin.set(t.row, t.col, galerkin.get(t.row, t.col) + t.val);
+    }
 
     /* write_sparse_to_file(galerkin, "galerkin_mat.txt"); */
 
@@ -152,29 +159,29 @@ SparseMatrix assemble_galerkin_mat(const Mesh &mesh) {
 
 
 
-Vector<Dynamic> assemble_load_vec(const Mesh &mesh, source_fn_ptr source_fn) {
+Vector assemble_load_vec(const Mesh &mesh) {
     usize n_nodes = mesh.n_nodes;
     usize n_tris = mesh.n_triangles;
 
-    Vector<Dynamic> phi = Vector<Dynamic>::Zero(n_nodes);
+    Vector phi = Vector::zero(1, n_nodes);
 
     for (usize i = 0; i < n_tris; i++) {
         auto tri_indices = mesh.triangles.at(i);
         Triangle tri = tri_from_indx(mesh, i);
 
-        Vector<3> local_phi = local_load_vec(tri, source_fn);
+        Vec3 local_phi = local_load_vec(tri);
 
-        phi(tri_indices.a) += local_phi(0);
-        phi(tri_indices.b) += local_phi(1);
-        phi(tri_indices.c) += local_phi(2);
+        phi.set(tri_indices.a, phi.get(tri_indices.a) +  local_phi.x);
+        phi.set(tri_indices.b, phi.get(tri_indices.b) +  local_phi.y);
+        phi.set(tri_indices.c, phi.get(tri_indices.c) +  local_phi.z);
     }
 
     // Boundry Conditions
     for(auto outer_boundry_node : mesh.outer_boundries) {
-        phi(outer_boundry_node) = 0.0   ;
+        phi.set(outer_boundry_node, 0.0);
     }
     for(auto inner_boundry_node : mesh.inner_boundries) {
-        phi(inner_boundry_node) = 1.0;
+        phi.set(inner_boundry_node, 1.0);
     }
 
     return phi;
@@ -184,14 +191,11 @@ Vector<Dynamic> assemble_load_vec(const Mesh &mesh, source_fn_ptr source_fn) {
 
 naive_matrix::Matrix solve_fem(const Mesh &mesh) {
     SparseMatrix a = assemble_galerkin_mat(mesh);
-    Vector<Dynamic> phi = assemble_load_vec(mesh, source_fn);
+    Vector phi = assemble_load_vec(mesh);
 
-    Eigen::SparseLU<SparseMatrix, Eigen::COLAMDOrdering<int>> solver;
-    solver.analyzePattern(a);
-    solver.factorize(a);
-    Vector<Dynamic> mu = solver.solve(phi);
+    naive_matrix::Matrix::LDLT_solve(&a, &phi);
 
-    return mu;
+    return phi;
 }
 
 
@@ -204,16 +208,16 @@ inline scalar triangle_area(const Triangle &t) {
 
 
 inline Triangle tri_from_indx(const Mesh &mesh, usize indx) {
-    auto tri_indices = mesh.triangles.at(indx);
-    Matrix<3, 2> vert_coords;
-    vert_coords << mesh.vertices.at(tri_indices.a).x,
-                   mesh.vertices.at(tri_indices.b).x,
-                   mesh.vertices.at(tri_indices.c).x,
-                   mesh.vertices.at(tri_indices.a).y,
-                   mesh.vertices.at(tri_indices.b).y,
-                   mesh.vertices.at(tri_indices.c).y;
+    Tria tri_indices = mesh.triangles.at(indx);
+    Triangle vert_coords;
+    vert_coords.set(0, 0, mesh.vertices.at(tri_indices.a).x);
+    vert_coords.set(1, 0, mesh.vertices.at(tri_indices.b).x);
+    vert_coords.set(2, 0, mesh.vertices.at(tri_indices.c).x);
+    vert_coords.set(0, 1, mesh.vertices.at(tri_indices.a).y);
+    vert_coords.set(1, 1, mesh.vertices.at(tri_indices.b).y);
+    vert_coords.set(2, 1, mesh.vertices.at(tri_indices.c).y);
 
-    return vert_coords.transpose();
+    return vert_coords;
 }
 
 
@@ -223,6 +227,12 @@ void write_sparse_to_file(const SparseMatrix &m, const char *name) {
     std::ofstream file(name);
     if (file.is_open())
     {
-        file << m << std::endl;
+        for(int i = 0; i < m.height; i++) {
+            for(int j = 0; j < m.width; j++) {
+                file << m.get(i,j); 
+                file << " ";
+            }
+            file << "\n";
+        }
     }
 }

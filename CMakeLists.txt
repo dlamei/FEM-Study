@@ -22,12 +22,27 @@ set(SOURCES
     src/MatrixImpl/band_matrix.cpp
 	)
 
+set(SOURCES_NAIVE
+	src/utils.h
+    src/benchmark.h
+		src/geometry.h
+		src/geometry.cpp
+	src/FEM_naive.h
+	src/FEM_naive.cpp
+
+    src/MatrixImpl/stack_matrix.h
+    src/MatrixImpl/stack_matrix.cpp
+    src/MatrixImpl/naive_matrix.h
+    src/MatrixImpl/naive_matrix.cpp
+	)
+
 
 #find_package(OpenCL REQUIRED)
 
 #include_directories(${OpenCL_INCLUDE_DIRS})
 
 add_executable(FEM ${SOURCES} src/main.cpp)
+add_executable(naive_FEM ${SOURCES_NAIVE} src/main_naive.cpp)
 target_link_libraries(FEM eigen)
 
 #target_link_libraries(FEM ${OpenCL_LIBRARIES})

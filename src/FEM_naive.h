@@ -7,6 +7,8 @@
 #include "utils.h"
 
 
-//* functions / types defined in every FEM implementation *//
 
-naive_matrix::Matrix solve_fem(const Mesh &mesh);
+    //* functions / types defined in every FEM implementation *//
+
+    naive_matrix::Matrix solve_fem(const Mesh &mesh);
+
