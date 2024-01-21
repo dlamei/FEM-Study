@@ -59,35 +59,35 @@ constexpr bool is_defined<T, decltype(typeid(T), void())> = true;
 
 /* defer for c++ ( from [https://github.com/gingerBill/gb] )*/
 
-template <typename T> struct gbRemoveReference       { typedef T Type; };
-template <typename T> struct gbRemoveReference<T &>  { typedef T Type; };
+template <typename T> struct gbRemoveReference { typedef T Type; };
+template <typename T> struct gbRemoveReference<T &> { typedef T Type; };
 template <typename T> struct gbRemoveReference<T &&> { typedef T Type; };
 
-template <typename T> inline T &&gb_forward(typename gbRemoveReference<T>::Type &t)  { return static_cast<T &&>(t); }
+template <typename T> inline T &&gb_forward(typename gbRemoveReference<T>::Type &t) { return static_cast<T &&>(t); }
 template <typename T> inline T &&gb_forward(typename gbRemoveReference<T>::Type &&t) { return static_cast<T &&>(t); }
-template <typename T> inline T &&gb_move   (T &&t)                                   { return static_cast<typename gbRemoveReference<T>::Type &&>(t); }
+template <typename T> inline T &&gb_move(T &&t) { return static_cast<typename gbRemoveReference<T>::Type &&>(t); }
 template <typename F>
 struct gbprivDefer {
-    F f;
-    gbprivDefer(F &&f) : f(gb_forward<F>(f)) {}
-    ~gbprivDefer() { f(); }
+	F f;
+	gbprivDefer(F &&f) : f(gb_forward<F>(f)) {}
+	~gbprivDefer() { f(); }
 };
 template <typename F> gbprivDefer<F> gb__defer_func(F &&f) { return gbprivDefer<F>(gb_forward<F>(f)); }
 
 
 /* assert with error messages */
 
-inline void gb__assert(const char* expr_str, bool expr, const char* file, const char *func, int line, const char* msg = nullptr)
+inline void gb__assert(const char *expr_str, bool expr, const char *file, const char *func, int line, const char *msg = nullptr)
 {
-    if (!expr)
-    {
-        std::cerr << "Assert failed:\t";
-        if (msg) std::cerr << msg;
-        std::cerr << "\nFailed:\t\t" << expr_str << "\n";
-        std::cerr << "Function:\t" << func << "\n";
-        std::cerr << "Source:\t\t" << file << ", line " << line << "\n";
-        abort();
-    }
+	if (!expr)
+	{
+		std::cerr << "Assert failed:\t";
+		if (msg) std::cerr << msg;
+		std::cerr << "\nFailed:\t\t" << expr_str << "\n";
+		std::cerr << "Function:\t" << func << "\n";
+		std::cerr << "Source:\t\t" << file << ", line " << line << "\n";
+		abort();
+	}
 }
 
 #define GB_DEFER_1(x, y) x##y
@@ -148,41 +148,41 @@ inline void gb__assert(const char* expr_str, bool expr, const char* file, const 
 #define db_assert(...) assert(__VA_ARGS__)
 #endif
 
-typedef std::optional<std::string>(* test_fn)();
+typedef std::optional<std::string>(*test_fn)();
 
 struct global_test_collector {
 
-    struct Test {
-        test_fn fn;
-        const char *name;
-    };
+	struct Test {
+		test_fn fn;
+		const char *name;
+	};
 
-    static global_test_collector &get_inst() {
-        static global_test_collector instance{};
-        return instance;
-    }
+	static global_test_collector &get_inst() {
+		static global_test_collector instance{};
+		return instance;
+	}
 
-    static const std::vector<Test> &get_tests() {
-        return global_test_collector::get_inst().tests;
-    }
+	static const std::vector<Test> &get_tests() {
+		return global_test_collector::get_inst().tests;
+	}
 
-    static void push(test_fn test, const char *name) {
-        global_test_collector::get_inst().tests.push_back(Test {.fn = test, .name = name });
-    }
+	static void push(test_fn test, const char *name) {
+		global_test_collector::get_inst().tests.push_back(Test{ .fn = test, .name = name });
+	}
 
-    global_test_collector(global_test_collector const &) = delete;
-    void operator=(global_test_collector const &) = delete;
+	global_test_collector(global_test_collector const &) = delete;
+	void operator=(global_test_collector const &) = delete;
 
 private:
-    global_test_collector() = default;
-    std::vector<Test> tests{};
+	global_test_collector() = default;
+	std::vector<Test> tests{};
 };
 
 
 struct __register_test {
-    explicit __register_test(test_fn test, const char *test_name) {
-        global_test_collector::push(test, test_name);
-    }
+	explicit __register_test(test_fn test, const char *test_name) {
+		global_test_collector::push(test, test_name);
+	}
 };
 
 #ifdef COMPILE_TESTS
@@ -192,16 +192,16 @@ struct __register_test {
     __register_test register_##test_name(test_##test_name, #test_name);
 
 
-inline std::optional<std::string> __test_assert(const char* expr_str, bool expr, const char* file, int line, const char* msg = nullptr)
+inline std::optional<std::string> __test_assert(const char *expr_str, bool expr, const char *file, int line, const char *msg = nullptr)
 {
-    std::stringstream s;
-    if (!expr) {
-        if (msg) s << msg;
-        s << "\nFailed:\t\t" << expr_str << "\n";
-        s << "Source:\t\t" << file << ", line " << line << "\n";
-        return s.str();
-    }
-    return {};
+	std::stringstream s;
+	if (!expr) {
+		if (msg) s << msg;
+		s << "\nFailed:\t\t" << expr_str << "\n";
+		s << "Source:\t\t" << file << ", line " << line << "\n";
+		return s.str();
+	}
+	return {};
 }
 
 #define TEST_ASSERT_1(x) __test_assert(#x, x, __FILE__, __LINE__, nullptr)
@@ -209,7 +209,7 @@ inline std::optional<std::string> __test_assert(const char* expr_str, bool expr,
 #define GET_TEST_ASSERT(_1, _2, NAME, ...) NAME
 #define test_assert(...) \
 do {\
-auto __test_result = GET_TEST_ASSERT(__VA_ARGS__, TEST_ASSERT_2, TEST_ASSERT_1) (__VA_ARGS__); \
+auto __test_result = EXPAND_VA_ARGS(GET_TEST_ASSERT(__VA_ARGS__, TEST_ASSERT_2, TEST_ASSERT_1) (__VA_ARGS__)); \
 if (__test_result) return __test_result; \
 } while(0)
 
