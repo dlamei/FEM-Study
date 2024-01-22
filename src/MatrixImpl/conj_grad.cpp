@@ -1,15 +1,13 @@
-#include "FEM_ocl.h"
+#include "conj_grad.h"
 
-#include "MatrixImpl/sparse_matrix.h"
-#include "utils.h"
+#include "sparse_matrix.h"
+#include "../utils.h"
 
 #include <CL/cl.hpp>
 #include <vector>
 
 
 #pragma comment(lib, "OpenCL.lib")
-
-
 
 namespace cl_utils {
 
@@ -33,6 +31,7 @@ namespace cl_utils {
 
 			std::cout << "using platform: " << platform.getInfo<CL_PLATFORM_NAME>() << "\n";
 			std::cout << "using device: " << device.getInfo<CL_DEVICE_NAME>() << "\n";
+			std::cout << "max workgroup size: " << CL_DEVICE_MAX_WORK_GROUP_SIZE << "\n";
 
 			cl::Context context({ device });
 			cl::CommandQueue queue(context, device);
@@ -118,7 +117,8 @@ namespace fem_ocl {
 	};
 
 	typedef cl::make_kernel<index_t, cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer> sqr_mat_vec_mul_kernel;
-	typedef cl::make_kernel<index_t, cl::Buffer, cl::Buffer, cl::Buffer> vec_sub_kernel;
+	typedef cl::make_kernel<scalar, cl::Buffer, cl::Buffer, cl::Buffer> vec_add_mul_kernel;
+	typedef cl::make_kernel<scalar, cl::Buffer, scalar, cl::Buffer> vec_add_mul_assign_kernel;
 	typedef cl::make_kernel<index_t, cl::Buffer, cl::Buffer> vec_copy_kernel;
 	typedef cl::make_kernel<index_t, scalar, cl::Buffer> vec_fill_kernel;
 	typedef cl::make_kernel<index_t, scalar, scalar, cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer> conj_grad_step_kernel;
@@ -127,7 +127,8 @@ namespace fem_ocl {
 		cl::Program program;
 
 		sqr_mat_vec_mul_kernel sqr_mat_vec_mul;
-		vec_sub_kernel vec_sub;
+		vec_add_mul_kernel vec_add_mul;
+		vec_add_mul_assign_kernel vec_add_mul_assign;
 		vec_copy_kernel vec_copy;
 		vec_fill_kernel vec_fill;
 		conj_grad_step_kernel conj_grad_step;
@@ -145,7 +146,8 @@ namespace fem_ocl {
 
 
 			auto sqr_mat_vec_mul = sqr_mat_vec_mul_kernel(cl::Kernel(program, "sqr_mat_vec_mul"));
-			auto vec_sub = vec_sub_kernel(cl::Kernel(program, "vec_sub"));
+			auto vec_add_mul = vec_add_mul_kernel(cl::Kernel(program, "vec_add_mul"));
+			auto vec_add_mul_assign = vec_add_mul_assign_kernel(cl::Kernel(program, "vec_add_mul_assign"));
 			auto vec_copy = vec_copy_kernel(cl::Kernel(program, "vec_copy"));
 			auto vec_fill = vec_fill_kernel(cl::Kernel(program, "vec_fill"));
 			auto conj_grad_step = conj_grad_step_kernel(cl::Kernel(program, "conj_grad_step"));
@@ -154,7 +156,8 @@ namespace fem_ocl {
 			return ConjGradKernels{
 				.program = program,
 				.sqr_mat_vec_mul = sqr_mat_vec_mul,
-				.vec_sub = vec_sub,
+				.vec_add_mul = vec_add_mul,
+				.vec_add_mul_assign = vec_add_mul_assign,
 				.vec_copy = vec_copy,
 				.vec_fill = vec_fill,
 				.conj_grad_step = conj_grad_step,
@@ -181,9 +184,9 @@ namespace fem_ocl {
 	}
 
 	// iter solve Ax = b
-	void run_conj_grad(sparse_matrix::Matrix &_A, std::vector<scalar> &_b) {
+	std::vector<scalar> run_conj_grad(sparse_matrix::Matrix &_A, std::vector<scalar> &_b) {
 		auto s = cl_utils::State::init();
-		auto cg_kernels = ConjGradKernels::load_kernels(s);
+		auto cg = ConjGradKernels::load_kernels(s);
 
 		const index_t n_rows = _A.rows;
 		const auto eargs = cl_utils::enqueue(s.queue, n_rows);
@@ -198,87 +201,83 @@ namespace fem_ocl {
 
 		// r_0 = b - Ax
 		auto r = cl_utils::Vector::empty(s, n_rows * sizeof(scalar));
-		cg_kernels.sqr_mat_vec_mul(eargs, n_rows, A.vals, A.col_indx, A.row_ptr, x.buf, tmp.buf); // tmp = Ax
-		s.queue.finish();
-		cg_kernels.vec_sub(eargs, n_rows, b.buf, tmp.buf, r.buf); // r = b - Ax
-		s.queue.finish();
+		cg.sqr_mat_vec_mul(eargs, n_rows, A.vals, A.col_indx, A.row_ptr, x.buf, tmp.buf).wait(); // tmp = Ax
+		cg.vec_add_mul(eargs, -1, b.buf, tmp.buf, r.buf).wait(); // r = b - Ax
 
 		// p_0 = r_0
 		auto p = cl_utils::Vector::empty(s, n_rows * sizeof(scalar));
-		cg_kernels.vec_fill(eargs, n_rows, 100, p.buf);
-		cg_kernels.vec_copy(eargs, n_rows, r.buf, p.buf);
-		s.queue.finish();
-
-		// r_k+1 = r_0
-		auto next_r = cl_utils::Vector::empty(s, n_rows * sizeof(scalar));
-		cg_kernels.vec_copy(eargs, n_rows, r.buf, next_r.buf);
-		s.queue.finish();
+		cg.vec_copy(eargs, n_rows, r.buf, p.buf).wait();
 
 		// pre alloc
 		auto Ap = cl_utils::Vector::empty(s, n_rows * sizeof(scalar));
-
-		scalar prev_rTr = 1;
 
 		std::vector<scalar> cpu_r(n_rows, 0);
 		std::vector<scalar> cpu_p(n_rows, 0);
 		std::vector<scalar> cpu_Ap(n_rows, 0);
 
+		s.queue.enqueueReadBuffer(r.buf, CL_TRUE, 0, n_rows * sizeof(scalar), cpu_r.data());
+		scalar old_rTr = dot(cpu_r, cpu_r);
+
 		for (u32 i = 0; i < 10000; i++) {
-			// Ap = A * p
-			cg_kernels.sqr_mat_vec_mul(eargs, n_rows, A.vals, A.col_indx, A.row_ptr, p.buf, Ap.buf);
-			s.queue.finish();
+
+			cl_event mul_ev = cg.sqr_mat_vec_mul(eargs, n_rows, A.vals, A.col_indx, A.row_ptr, p.buf, Ap.buf)();
+
+			s.queue.enqueueReadBuffer(Ap.buf, CL_TRUE, 0, n_rows * sizeof(scalar), cpu_Ap.data());
+			s.queue.enqueueReadBuffer(p.buf, CL_TRUE, 0, n_rows * sizeof(scalar), cpu_p.data());
+
+			scalar pTAp = dot(cpu_p, cpu_Ap);
+			scalar alpha = old_rTr / pTAp;
+
+			// x = x + alpha * p
+			cg.vec_add_mul_assign(eargs, 1, x.buf, alpha, p.buf);
+			cg.vec_add_mul_assign(eargs, 1, r.buf, -alpha, Ap.buf);
 
 			s.queue.enqueueReadBuffer(r.buf, CL_TRUE, 0, n_rows * sizeof(scalar), cpu_r.data());
-			s.queue.enqueueReadBuffer(p.buf, CL_TRUE, 0, n_rows * sizeof(scalar), cpu_p.data());
-			s.queue.enqueueReadBuffer(Ap.buf, CL_TRUE, 0, n_rows * sizeof(scalar), cpu_Ap.data());
 
+			scalar new_rTr = dot(cpu_r, cpu_r);
+			scalar beta = new_rTr / old_rTr;
 
-			double rTr = dot(cpu_r, cpu_r);
-			double pTAp = dot(cpu_p, cpu_Ap);
+			// p = r + beta * p
+			cg.vec_add_mul_assign(eargs, beta, p.buf, 1, r.buf);
 
-			if (i % 100 == 0) {
-				printf("residual norm: %f\n", std::sqrt(rTr));
-			}
-
-			scalar alpha = (scalar)(rTr / pTAp * rTr);
-			scalar beta = (scalar)(rTr / prev_rTr);
-
-			cg_kernels.conj_grad_step(eargs, n_rows, alpha, beta, Ap.buf, x.buf, r.buf, p.buf);
 			s.queue.finish();
 
-			prev_rTr = rTr;
+			old_rTr = new_rTr;
+
+			if (old_rTr < 0.1) {
+				printf("equilibrium reached!");
+				break;
+			}
+
+			if (i % 100 == 0) {
+				printf("residium norm: %f\n", std::sqrt(old_rTr));
+			}
 		}
 
-		print(x.to_cpu<scalar>(s));
 
+		return x.to_cpu<scalar>(s);
 	}
 
 
-	void conj_grad() {
+	//void conj_grad() {
 
-		std::vector<Triplet> triplets{};
-		triplets.push_back({ 0, 0, 4 });
-		triplets.push_back({ 0, 1, 12 });
-		triplets.push_back({ 0, 2, -16 });
-		triplets.push_back({ 1, 0, 12 });
-		triplets.push_back({ 1, 1, 37 });
-		triplets.push_back({ 1, 2, -43 });
-		triplets.push_back({ 2, 0, -16 });
-		triplets.push_back({ 2, 1, -43 });
-		triplets.push_back({ 2, 2, 98 });
+	//	std::vector<Triplet> triplets{};
+	//	triplets.push_back({ 0, 0, 4 });
+	//	triplets.push_back({ 0, 1, 12 });
+	//	triplets.push_back({ 0, 2, -16 });
+	//	triplets.push_back({ 1, 0, 12 });
+	//	triplets.push_back({ 1, 1, 37 });
+	//	triplets.push_back({ 1, 2, -43 });
+	//	triplets.push_back({ 2, 0, -16 });
+	//	triplets.push_back({ 2, 1, -43 });
+	//	triplets.push_back({ 2, 2, 98 });
 
-		auto m = sparse_matrix::Matrix::from_triplets(3, 3, &triplets);
+	//	auto m = sparse_matrix::Matrix::from_triplets(3, 3, &triplets);
 
-		std::vector<scalar> b = { 1, 1, 1 };
+	//	std::vector<scalar> b = { 1, 1, 1 };
 
-		run_conj_grad(m, b);
-	}
-
-	void solve()
-	{
-		conj_grad();
-	}
-
+	//	run_conj_grad(m, b);
+	//}
 
 }
 

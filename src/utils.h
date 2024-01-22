@@ -151,7 +151,7 @@ inline void gb__assert(const char *expr_str, bool expr, const char *file, const 
 #ifdef NDEBUG
 #define db_assert(...)
 #else
-#define db_assert(...) assert(__VA_ARGS__)
+#define db_assert(...) EXPAND_VA_ARGS(assert(__VA_ARGS__))
 #endif
 
 typedef std::optional<std::string>(*test_fn)();

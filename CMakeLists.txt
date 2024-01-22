@@ -12,9 +12,13 @@ set(SOURCES
 		src/geometry.cpp
 
     src/FEM.h src/FEM.cpp
-	src/FEM_ocl.h src/FEM_ocl.cpp
-	src/conj_grad.ocl
-
+	src/FEM_conj_grad.h
+	src/FEM_conj_grad.cpp
+	
+	src/MatrixImpl/conj_grad.h 
+	src/MatrixImpl/conj_grad.cpp
+	src/MatrixImpl/conj_grad.ocl
+	
     src/MatrixImpl/stack_matrix.h
     src/MatrixImpl/stack_matrix.cpp
     src/MatrixImpl/naive_matrix.h
@@ -41,14 +45,13 @@ set(SOURCES_NAIVE
 
 
 find_package(OpenCL REQUIRED)
-
 include_directories(${OpenCL_INCLUDE_DIRS})
 
 add_executable(FEM ${SOURCES} src/main.cpp)
 add_executable(naive_FEM ${SOURCES_NAIVE} src/main_naive.cpp)
 target_link_libraries(FEM eigen)
-
 target_link_libraries(FEM ${OpenCL_LIBRARIES})
+
 
 
 # testing

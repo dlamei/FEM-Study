@@ -210,11 +210,17 @@ namespace stack_matrix {
 								4, 1,
 								2, 3
 								);
+		mat3x2.print();
+		std::cout << "\n";
 		Matrix2x3 mat2x3 = Matrix2x3::init(
 								4, 3, 2,
 								5, 2, 1
 		);
+		mat2x3.print();
+		std::cout << "\n";
 		Matrix3x3 mat3x3 = mat3x2_mul_mat2x3(mat3x2, mat2x3);
+
+		mat3x3.print();
 
 		return {};
 		})

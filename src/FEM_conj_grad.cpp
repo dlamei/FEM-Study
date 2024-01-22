@@ -1,16 +1,19 @@
 #include "FEM_naive.h"
+
+#include "MatrixImpl/sparse_matrix.h"
+#include "MatrixImpl/stack_matrix.h"
+#include "MatrixImpl/conj_grad.h"
+
 #include <fstream>
 #include <iostream>
 
-using Matrix = naive_matrix::Matrix;
-
-using Vector = naive_matrix::Matrix;
+using Vector = std::vector<scalar>;
 
 typedef stack_matrix::Vector3 Vec3;
 typedef stack_matrix::Matrix3x3 Mat3x3;
 typedef stack_matrix::Matrix3x2 Mat3x2;
 typedef stack_matrix::Matrix2x3 Triangle;
-typedef naive_matrix::Matrix SparseMatrix;
+typedef sparse_matrix::Matrix SparseMatrix;
 
 scalar triangle_area(const Triangle &t);
 Triangle tri_from_indx(const Mesh &mesh, usize indx);
@@ -107,17 +110,17 @@ std::vector<Triplet> assemble_galerkin_mat(const Mesh &mesh) {
 		//for j in  0..3
 		//    for k in 0..3
 
-		if (i == 0) {
-			std::cout << "Tri Incices: \n";
-			std::cout << tri_indices.a << " " << tri_indices.b << " " << tri_indices.c << "\n";
-			std::cout << "Triangle: \n";
-			tri.print();
-			std::cout << "\n";
-			std::cout << "\nGrad Bary Coords: \n";
-			grad_bary_coords(tri).print();
-			std::cout << "\nElement Matrix: \n";
-			elem_mat.print();
-		}
+		//if (i == 0) {
+		//	std::cout << "Tri Incices: \n";
+		//	std::cout << tri_indices.a << " " << tri_indices.b << " " << tri_indices.c << "\n";
+		//	std::cout << "Triangle: \n";
+		//	tri.print();
+		//	std::cout << "\n";
+		//	std::cout << "\nGrad Bary Coords: \n";
+		//	grad_bary_coords(tri).print();
+		//	std::cout << "\nElement Matrix: \n";
+		//	elem_mat.print();
+		//}
 
 		index_t indx_0 = tri_indices.a;
 		index_t indx_1 = tri_indices.b;
@@ -145,7 +148,7 @@ Vector assemble_load_vec(const Mesh &mesh) {
 	usize n_nodes = mesh.n_nodes;
 	usize n_tris = mesh.n_triangles;
 
-	Vector phi = Vector::zero(1, n_nodes);
+	Vector phi(n_nodes, 0);
 
 	for (usize i = 0; i < n_tris; i++) {
 		Tria tri_indices = mesh.triangles.at(i);
@@ -153,29 +156,29 @@ Vector assemble_load_vec(const Mesh &mesh) {
 
 		Vec3 local_phi = local_load_vec(tri);
 
-		phi.set(tri_indices.a, phi.get(tri_indices.a) + local_phi.x);
-		phi.set(tri_indices.b, phi.get(tri_indices.b) + local_phi.y);
-		phi.set(tri_indices.c, phi.get(tri_indices.c) + local_phi.z);
+		phi.at(tri_indices.a) += local_phi.x;
+		phi.at(tri_indices.b) += local_phi.y;
+		phi.at(tri_indices.c) += local_phi.z;
 	}
 
 	return phi;
 }
 
 //* SOLVING *//
-bool isSymmetric(const SparseMatrix &matrix, double &unsymmetryMeasure) {
-	int size = matrix.height;
-	unsymmetryMeasure = 0;
-
-	for (int i = 0; i < size; ++i) {
-		for (int j = i; j < size; ++j) { // Check only half the matrix (above the diagonal)
-			if (matrix.get(i, j) != matrix.get(j, i)) {
-				unsymmetryMeasure += abs(matrix.get(i, j) - matrix.get(j, i));
-			}
-		}
-	}
-
-	return unsymmetryMeasure == 0;
-}
+//bool isSymmetric(const SparseMatrix &matrix, double &unsymmetryMeasure) {
+//	int size = matrix.height;
+//	unsymmetryMeasure = 0;
+//
+//	for (int i = 0; i < size; ++i) {
+//		for (int j = i; j < size; ++j) { // Check only half the matrix (above the diagonal)
+//			if (matrix.get(i, j) != matrix.get(j, i)) {
+//				unsymmetryMeasure += abs(matrix.get(i, j) - matrix.get(j, i));
+//			}
+//		}
+//	}
+//
+//	return unsymmetryMeasure == 0;
+//}
 
 void apply_boundry_conditions(const Mesh &mesh, std::vector<Triplet> *A_triplets, Vector *phi) {
 
@@ -192,16 +195,16 @@ void apply_boundry_conditions(const Mesh &mesh, std::vector<Triplet> *A_triplets
 
 	// RHS Vector
 	for (auto outer_boundry_node : mesh.outer_boundries) {
-		phi->set(outer_boundry_node, 0.0);
+		phi->at(outer_boundry_node) = 0;
 	}
 	for (auto inner_boundry_node : mesh.inner_boundries) {
-		phi->set(inner_boundry_node, 1.0);
+		phi->at(inner_boundry_node) = 1;
 	}
 
 	for (auto t : *A_triplets) {
 		if (inner_boundry_nodes.find(t.col) != inner_boundry_nodes.end() &&
 			boundry_nodes.find(t.row) == boundry_nodes.end()) {
-			phi->set(t.row, phi->get(t.row) - t.val);
+			phi->at(t.row) += t.val;
 		}
 	}
 
@@ -217,26 +220,17 @@ void apply_boundry_conditions(const Mesh &mesh, std::vector<Triplet> *A_triplets
 
 }
 
-naive_matrix::Matrix solve_fem(const Mesh &mesh) {
+std::vector<scalar> solve_fem(const Mesh &mesh) {
 
 	std::vector<Triplet> A_triplets = assemble_galerkin_mat(mesh);
 	Vector phi = assemble_load_vec(mesh);
-
 	apply_boundry_conditions(mesh, &A_triplets, &phi);
 
 	index_t n_verts = mesh.n_nodes;
-	SparseMatrix A = naive_matrix::Matrix::zero(n_verts, n_verts);
-	for (auto t : A_triplets) {
-		A.set(t.col, t.row, A.get(t.col, t.row) + t.val);
-	}
+	SparseMatrix A = SparseMatrix::from_triplets(n_verts, n_verts, &A_triplets);
 
-	double unsymetry;
-	isSymmetric(A, unsymetry);
-	std::cout << "UnsymetryMessure: " << unsymetry << "\n";
 
-	naive_matrix::Matrix::LDLT_solve(&A, &phi);
-
-	return phi;
+	return fem_ocl::run_conj_grad(A, phi);
 }
 
 
@@ -262,18 +256,18 @@ inline Triangle tri_from_indx(const Mesh &mesh, usize indx) {
 }
 
 
-void write_sparse_to_file(const SparseMatrix &m, const char *name) {
-	PROFILE_FUNC()
-
-		std::ofstream file(name);
-	if (file.is_open())
-	{
-		for (int i = 0; i < m.height; i++) {
-			for (int j = 0; j < m.width; j++) {
-				file << m.get(i, j);
-				file << " ";
-			}
-			file << "\n";
-		}
-	}
-}
+//void write_sparse_to_file(const SparseMatrix &m, const char *name) {
+//	PROFILE_FUNC()
+//
+//		std::ofstream file(name);
+//	if (file.is_open())
+//	{
+//		for (int i = 0; i < m.height; i++) {
+//			for (int j = 0; j < m.width; j++) {
+//				file << m.get(i, j);
+//				file << " ";
+//			}
+//			file << "\n";
+//		}
+//	}
+//}

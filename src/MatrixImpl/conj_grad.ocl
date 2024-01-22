@@ -39,10 +39,9 @@ __kernel void sqr_mat_vec_mul(
 	out_vec[id] = sum;
 }
 
-// v1 - v2
-__kernel void vec_sub(
-	const index_t n_rows,
-	// in
+// v1 + s * v2
+__kernel void vec_add_mul(
+	const scalar s,
 	__global const scalar *v1,
 	__global const scalar *v2,
 
@@ -51,18 +50,21 @@ __kernel void vec_sub(
 ) 
 {
 	int id = get_global_id(0);
-
-	if (id == 0) {
-		printf("vec_sub\n");
-	}
-
-	if (id >= n_rows) {
-		printf("index out of bounds");
-		return;
-	}
-
-	out[id] = v1[id] - v2[id];
+	out[id] = v1[id] + s * v2[id];
 }
+
+// v1 = s1 * v1 + s2 * v2
+__kernel void vec_add_mul_assign(
+	const scalar s1,
+	__global scalar *v1,
+	const scalar s2,
+	__global const scalar *v2
+) 
+{
+	int id = get_global_id(0);
+	v1[id] = s1 * v1[id] + s2 * v2[id];
+}
+
 
 // v2 <- v1
 __kernel void vec_copy(
