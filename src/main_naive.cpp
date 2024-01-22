@@ -6,15 +6,15 @@
 
 int main() {
 
-    std::string file_name = "4n_1h";
-    std::string folder_name = "1h_exponential_series/";
+    std::string file_name = "30n_1h_circle";
+    std::string folder_name = "";
 
     // mesh
     auto mesh = Mesh::parse_mesh("../meshes/" + folder_name + file_name + ".msh");
 
     // Eigen FEM
     auto res = solve_fem(mesh);
-    mesh.save_mesh_3D(file_name + ".vtk", res.data, res.height); 
+    mesh.save_mesh_3D(file_name + "_naive.vtk", res.data, res.height); 
 
 
 #if PROFILING

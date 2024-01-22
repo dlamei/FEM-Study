@@ -43,13 +43,31 @@ set(SOURCES_NAIVE
     src/MatrixImpl/naive_matrix.cpp
 	)
 
-
 find_package(OpenCL REQUIRED)
 include_directories(${OpenCL_INCLUDE_DIRS})
 
 add_executable(FEM ${SOURCES} src/main.cpp)
 add_executable(naive_FEM ${SOURCES_NAIVE} src/main_naive.cpp)
+add_executable(time_series ${SOURCES_NAIVE} src/time_series.cpp)
+
+# Add optimization flags to the target
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(time_series PRIVATE -O3)
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    target_compile_options(time_series PRIVATE /O2)
+endif()
+# Add optimization flags to the target
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(naive_FEM PRIVATE -O3)
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    target_compile_options(naive_FEM PRIVATE /O2)
+endif()
+
+
 target_link_libraries(FEM eigen)
+
+target_link_libraries(time_series eigen)
+
 target_link_libraries(FEM ${OpenCL_LIBRARIES})
 
 

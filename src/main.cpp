@@ -13,8 +13,8 @@
 #include "benchmark.h"
 
 
-int main() {
 
+int main() {
 
 	std::string file_name = "100n_1h";
 	std::string folder_name = "1h_linear_series/";
