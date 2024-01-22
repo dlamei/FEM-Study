@@ -1,0 +1,122 @@
+R"(
+
+typedef float scalar;
+typedef int index_t;
+
+// multiply square sparse matrix (CRS) with a vector
+__kernel void sqr_mat_vec_mul(
+	const index_t n_rows,
+	// sparse matrix
+	__global const scalar *vals,
+	__global const index_t *col_indx,
+	__global const index_t *row_ptr,
+
+	// input vec
+	__global const scalar *vec,
+
+	// result vec
+	__global scalar *out_vec
+) 
+{
+	int id = get_global_id(0);
+
+	//if (id >= n_rows) {
+	//	printf("index out of bound");
+	//	return;
+	//}
+
+	scalar sum = 0.f;
+
+	index_t start = row_ptr[id];
+	index_t end = row_ptr[id + 1];
+
+	for (index_t i = start; i < end; ++i) {
+		scalar val = vals[i];
+		index_t col = col_indx[i];
+		sum += val * vec[col];
+	}
+
+	out_vec[id] = sum;
+}
+
+// v1 + s * v2
+__kernel void vec_add_mul(
+	const scalar s,
+	__global const scalar *v1,
+	__global const scalar *v2,
+
+	// out
+	__global scalar *out
+) 
+{
+	int id = get_global_id(0);
+	out[id] = v1[id] + s * v2[id];
+}
+
+// v1 = s1 * v1 + s2 * v2
+__kernel void vec_add_mul_assign(
+	const scalar s1,
+	__global scalar *v1,
+	const scalar s2,
+	__global const scalar *v2
+) 
+{
+	int id = get_global_id(0);
+	v1[id] = s1 * v1[id] + s2 * v2[id];
+}
+
+
+// v2 <- v1
+__kernel void vec_copy(
+	const index_t n_rows,
+	// src
+	__global const scalar *v1,
+
+	// dest
+	__global scalar *v2
+) 
+{
+	int id = get_global_id(0);
+
+	if (id >= n_rows) {
+		printf("index out of bounds");
+		return;
+	}
+
+	v2[id] = v1[id];
+}
+
+
+
+__kernel void conj_grad_step(
+	const index_t n_rows,
+	const scalar alpha,
+	const scalar beta,
+
+	__global const scalar *Ap,
+
+	__global scalar *x,
+	__global scalar *r,
+	__global scalar *p
+
+) 
+{
+	int id = get_global_id(0);
+
+	x[id] = x[id] + alpha * p[id];
+	r[id] = r[id] - alpha * Ap[id];
+	p[id] = r[id] + beta * p[id];
+
+}
+
+__kernel void vec_fill(
+	const index_t n_rows,
+	const scalar val,
+	__global scalar *vec
+)
+{
+	int id = get_global_id(0);
+	vec[id] = val;
+}
+
+)"
