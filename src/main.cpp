@@ -1,6 +1,8 @@
 #include "FEM.h"
 #include "benchmark.h"
 
+#include "FEM_ocl.h"
+
 scalar source_fn(const Eigen::Vector<scalar, 2> &x) {
 	return 0;
 }
@@ -8,15 +10,17 @@ scalar source_fn(const Eigen::Vector<scalar, 2> &x) {
 
 int main() {
 
+	fem_ocl::solve();
+
 	std::string file_name = "10n_1h";
 	std::string folder_name = "1h_linear_series/";
 
-    // mesh
-    auto mesh = Mesh::parse_mesh("../meshes/" + folder_name + file_name + ".msh");
+	// mesh
+	auto mesh = Mesh::parse_mesh("../meshes/" + folder_name + file_name + ".msh");
 
-    // Eigen FEM
-    auto res = solve_fem(mesh, &source_fn);
-    mesh.save_mesh_3D(file_name + ".vtk", res.data(), res.rows()); 
+	// Eigen FEM
+	auto res = solve_fem(mesh, &source_fn);
+	mesh.save_mesh_3D(file_name + ".vtk", res.data(), res.rows());
 
 
 #if PROFILING

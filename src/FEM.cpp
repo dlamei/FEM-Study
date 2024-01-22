@@ -7,7 +7,6 @@
 #include <Eigen/SparseQR>
 #include <Eigen/SparseCholesky>
 
-
 const int Dynamic = Eigen::Dynamic;
 
 template <const int rows, const int cols>

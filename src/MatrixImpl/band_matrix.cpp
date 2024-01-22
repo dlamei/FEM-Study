@@ -22,7 +22,7 @@ namespace band_matrix {
 		index_t max_diag = 0;
 
 		for (const auto &t : triplts) {
-			max_diag = std::max(max_diag, std::abs(t.x - t.y));
+			max_diag = std::max(max_diag, std::abs(t.col - t.row));
 		}
 
 		index_t band_width = max_diag * 2 + 1;
@@ -30,8 +30,8 @@ namespace band_matrix {
 
 		for (const auto &t : triplts) {
 			// only add the lower half
-			if (t.y - t.x >= 0) {
-				bm.add(t.x, t.y, t.v);
+			if (t.row - t.col >= 0) {
+				bm.add(t.col, t.row, t.val);
 			}
 		}
 
@@ -84,7 +84,21 @@ namespace band_matrix {
 	}
 }
 
-using namespace band_matrix;
+void test_band() {
+	std::vector<Triplet> triplets;
+
+	for (i32 i = 0; i < 10; i++) {
+		triplets.push_back({ i, i, (float)i / 10 });
+	}
+
+	triplets.push_back({ 5, 6, 3.2 });
+	triplets.push_back({ 6, 5, 3.2 });
+
+	auto bm = band_matrix::BandMatrix::from_triplets(10, 10, triplets);
+
+
+}
+
 
 TEST(band_matrix, {
 
@@ -97,11 +111,11 @@ TEST(band_matrix, {
 	triplets.push_back({ 5, 6, 3.2 });
 	triplets.push_back({ 6, 5, 3.2 });
 
-	auto bm = BandMatrix::from_triplets(10, 10, triplets);
+	auto bm = band_matrix::BandMatrix::from_triplets(10, 10, triplets);
 
 
 	for (const auto &t : triplets) {
-		test_assert(cmp_scalar(bm.get(t.x, t.y), t.v));
+		test_assert(cmp_scalar(bm.get(t.col, t.row), t.val));
 	}
 
 

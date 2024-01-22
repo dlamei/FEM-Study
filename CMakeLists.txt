@@ -10,9 +10,10 @@ set(SOURCES
     src/benchmark.h
 		src/geometry.h
 		src/geometry.cpp
-    src/FEM.h src/FEM.cpp
 
-	#src/FEM_ocl.h src/FEM_ocl.cpp
+    src/FEM.h src/FEM.cpp
+	src/FEM_ocl.h src/FEM_ocl.cpp
+	src/conj_grad.ocl
 
     src/MatrixImpl/stack_matrix.h
     src/MatrixImpl/stack_matrix.cpp
@@ -20,6 +21,8 @@ set(SOURCES
     src/MatrixImpl/naive_matrix.cpp
     src/MatrixImpl/band_matrix.h
     src/MatrixImpl/band_matrix.cpp
+    src/MatrixImpl/sparse_matrix.h
+    src/MatrixImpl/sparse_matrix.cpp
 	)
 
 set(SOURCES_NAIVE
@@ -37,15 +40,15 @@ set(SOURCES_NAIVE
 	)
 
 
-#find_package(OpenCL REQUIRED)
+find_package(OpenCL REQUIRED)
 
-#include_directories(${OpenCL_INCLUDE_DIRS})
+include_directories(${OpenCL_INCLUDE_DIRS})
 
 add_executable(FEM ${SOURCES} src/main.cpp)
 add_executable(naive_FEM ${SOURCES_NAIVE} src/main_naive.cpp)
 target_link_libraries(FEM eigen)
 
-#target_link_libraries(FEM ${OpenCL_LIBRARIES})
+target_link_libraries(FEM ${OpenCL_LIBRARIES})
 
 
 # testing
@@ -53,6 +56,8 @@ add_executable(FEM_TEST EXCLUDE_FROM_ALL ${SOURCES} src/test.cpp)
 target_compile_definitions(FEM_TEST PRIVATE COMPILE_TESTS)
 find_package(Threads)
 target_link_libraries(FEM_TEST ${CMAKE_THREAD_LIBS_INIT} eigen)
+
+target_link_libraries(FEM_TEST ${OpenCL_LIBRARIES})
 
 # profiling
 add_executable(FEM_PROFILE ${SOURCES} src/main.cpp)

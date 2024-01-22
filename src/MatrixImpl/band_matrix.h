@@ -4,10 +4,10 @@
 
 namespace band_matrix {
 
-	struct Triplet {
-		index_t x{}, y{};
-		scalar v{};
-	};
+	//struct Triplet {
+	//	index_t x{}, y{};
+	//	scalar v{};
+	//};
 
 	// requires the matrix to be symmetric
 	struct BandMatrix {

@@ -44,6 +44,12 @@ static_assert(sizeof(f64) == 8);
 typedef f32 scalar;
 typedef i32 index_t;
 
+struct Triplet {
+	index_t row;
+	index_t col;
+	scalar val;
+};
+
 #define SCALAR_EPS std::numeric_limits<scalar>::epsilon()
 
 inline bool cmp_scalar(scalar a, scalar b, scalar eps = SCALAR_EPS) {
@@ -187,8 +193,8 @@ struct __register_test {
 
 #ifdef COMPILE_TESTS
 
-#define TEST(test_name, test_body) \
-    std::optional<std::string> test_##test_name() test_body \
+#define TEST(test_name, ...) \
+    std::optional<std::string> test_##test_name() __VA_ARGS__ \
     __register_test register_##test_name(test_##test_name, #test_name);
 
 
