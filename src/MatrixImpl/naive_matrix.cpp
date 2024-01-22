@@ -5,7 +5,7 @@
 #include <vector>
 #include <algorithm>
 
-using namespace naive_matrix;
+namespace naive_matrix {
 
 
 /* macros because then the assert also prints out the function name */
@@ -41,26 +41,26 @@ Matrix init_mat(u64 w, u64 h) {
 }
 
 
-inline u64 Matrix::count() const {
+u64 Matrix::count() const {
     return this->width * this->height; 
 }
 
-inline scalar Matrix::get(u64 indx) const {
+scalar Matrix::get(u64 indx) const {
     CHECK_INDX_BOUND(indx);
     return this->data[indx];
 }
 
-inline scalar Matrix::get(u64 x, u64 y) const {
+scalar Matrix::get(u64 x, u64 y) const {
     TO_INDEX(indx, x, y);
     return this->get(indx);
 }
 
-inline void Matrix::set(u64 indx, scalar val) {
+void Matrix::set(u64 indx, scalar val) {
     CHECK_INDX_BOUND(indx);
     this->data[indx] = val;
 }
 
-inline void Matrix::set(u64 x, u64 y, scalar val) {
+void Matrix::set(u64 x, u64 y, scalar val) {
     TO_INDEX(indx, x, y);
     this->data[indx] = val;
 }
@@ -184,12 +184,12 @@ bool Matrix::eq(const Matrix &a, const Matrix &b, float eps) {
     return true;
 }
 
-inline Matrix Matrix::zero(u64 w, u64 h) {
+Matrix Matrix::zero(u64 w, u64 h) {
     auto mat = init_mat(w, h);
     return mat;
 }
 
-inline Matrix Matrix::ident(u64 w, u64 h) {
+Matrix Matrix::ident(u64 w, u64 h) {
     auto mat = Matrix::zero(w, h);
 
     u64 n = std::min(w, h);
@@ -199,7 +199,7 @@ inline Matrix Matrix::ident(u64 w, u64 h) {
     return mat;
 }
 
-inline Matrix Matrix::from_arr(u64 w, u64 h, const std::initializer_list<scalar> &arr) {
+Matrix Matrix::from_arr(u64 w, u64 h, const std::initializer_list<scalar> &arr) {
     db_assert(w * h == arr.size());
     auto mat = uninit_matrix(w, h);
 
@@ -212,7 +212,7 @@ inline Matrix Matrix::from_arr(u64 w, u64 h, const std::initializer_list<scalar>
     return mat;
 }
 
-inline Matrix Matrix::clone(const Matrix &source) {
+Matrix Matrix::clone(const Matrix &source) {
     auto mat = init_mat(source.width, source.height);
     for (u64 i = 0; i < mat.count(); i++) {
         mat.set(i, source.get(i));
@@ -220,7 +220,7 @@ inline Matrix Matrix::clone(const Matrix &source) {
     return mat;
 }
 
-inline void Matrix::destroy(Matrix *m) {
+void Matrix::destroy(Matrix *m) {
     db_assert(m->data != nullptr);
 
     if (m-> width > 0 && m->height > 0) {
@@ -332,3 +332,4 @@ TEST(LDLT_solve, {
 
 })
 
+}

@@ -202,6 +202,7 @@ void apply_boundry_conditions(const Mesh &mesh, std::vector<Eigen::Triplet<scala
     for(auto inner_boundry_node : mesh.inner_boundries) {
         (*phi)(inner_boundry_node) = 1.0;
     }
+    
     for(auto t : *A_triplets) {
         if(inner_boundry_nodes.find(t.col()) != inner_boundry_nodes.end() && 
             boundry_nodes.find(t.row()) == boundry_nodes.end()) {
@@ -241,8 +242,12 @@ Vector<Dynamic> solve_fem(const Mesh &mesh, source_fn_ptr source_fn) {
     SparseMatrix A(n_verts, n_verts);
     A.setFromTriplets(A_triplets.begin(), A_triplets.end());
 
-    //A.makeCompressed();
+    // SparseLU solver
+    //Eigen::SparseLU<SparseMatrix> solver;
+	//solver.analyzePattern(A);
+	//solver.factorize(A);
 
+    // LDLT solver
     Eigen::SimplicialLDLT<SparseMatrix> solver;
     solver.compute(A);
 

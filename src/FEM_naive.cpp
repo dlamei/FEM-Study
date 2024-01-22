@@ -113,18 +113,6 @@ std::vector<Triplet> assemble_galerkin_mat(const Mesh &mesh) {
         //for j in  0..3
         //    for k in 0..3
 
-        if(i == 0) {
-            std::cout << "Tri Incices: \n";
-            std::cout << tri_indices.a << " " << tri_indices.b << " " << tri_indices.c << "\n";
-            std::cout << "Triangle: \n";
-            tri.print();
-            std::cout << "\n";
-            std::cout << "\nGrad Bary Coords: \n";
-            grad_bary_coords(tri).print();
-            std::cout << "\nElement Matrix: \n";
-            elem_mat.print();
-        }
-
         index_t indx_0 = tri_indices.a;
         index_t indx_1 = tri_indices.b;
         index_t indx_2 = tri_indices.c;
@@ -144,7 +132,6 @@ std::vector<Triplet> assemble_galerkin_mat(const Mesh &mesh) {
 
     return triplets;
 }
-
 
 
 Vector assemble_load_vec(const Mesh &mesh) {
@@ -236,9 +223,11 @@ naive_matrix::Matrix solve_fem(const Mesh &mesh) {
         A.set(t.col, t.row, A.get(t.col, t.row) + t.val);
     }
 
+    /*
     double unsymetry;
     isSymmetric(A, unsymetry);
     std::cout << "UnsymetryMessure: " << unsymetry << "\n";
+    */
 
     naive_matrix::Matrix::LDLT_solve(&A, &phi);
 

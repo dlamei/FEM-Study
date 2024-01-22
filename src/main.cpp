@@ -6,10 +6,11 @@ scalar source_fn(const Eigen::Vector<scalar, 2> &x) {
 }
 
 
+
 int main() {
 
-    std::string file_name = "512n_1h";
-    std::string folder_name = "1h_exponential_series/";
+    std::string file_name = "200n_1h";
+    std::string folder_name = "1h_linear_series/";
 
     // mesh
     auto mesh = Mesh::parse_mesh("../meshes/" + folder_name + file_name + ".msh");

@@ -6,8 +6,8 @@
 
 int main() {
 
-    std::string file_name = "32n_1h";
-    std::string folder_name = "1h_exponential_series/";
+    std::string file_name = "30n_1h_circle";
+    std::string folder_name = "";
 
     // mesh
     auto mesh = Mesh::parse_mesh("../meshes/" + folder_name + file_name + ".msh");
